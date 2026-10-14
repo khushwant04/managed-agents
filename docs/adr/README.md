@@ -36,4 +36,4 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0019](0019-child-runs-execute-inline.md) | Child runs from call_agent and spawn_subagent execute inline | Accepted |
 | [0020](0020-approval-expression-language.md) | The approval `when` expression language | Accepted |
 
-ADRs 0015 to 0017 and 0005 track the [open questions](../roadmap.md#open-questions) in the plan; each states a recommendation and must be decided before v0.1. The implementation currently follows each recommendation (Postgres queue, incident-investigator demo, placeholder package names, no license file yet), so accepting them changes nothing in code; choosing otherwise means a follow-up change.
+ADRs 0015 to 0017 and 0005 track the [open questions](../roadmap.md#open-questions) in the plan; each states a recommendation and must be decided before v0.1. The implementation follows the recommendations of ADR-0005 (Postgres queue) and ADR-0017 (incident-investigator demo). It still uses the placeholder `agents` import and package names, so accepting ADR-0015's fresh namespace means a rename, and accepting ADR-0016 means adding a `LICENSE` file.
