@@ -274,3 +274,33 @@ class AuditEntry(_Model):
 
 class AuditList(_Model):
     entries: list[AuditEntry]
+
+
+class ErrorBody(_Model):
+    error: str
+    message: str | None = None
+    problems: list[str] | None = None
+
+
+class DeploymentCreate(BaseModel):
+    agent: str
+    alias: str = "prod"
+    version: int | None = None
+    """Point the alias at this version first (creates the alias if needed)."""
+    triggers: list[dict[str, Any]] | None = None
+    name: str | None = None
+    concurrency: int = 10
+    environment: str | None = None
+    secrets: list[str] = []
+    budget: dict[str, Any] = {}
+    webhook_secret: str | None = None
+
+
+class DeploymentUpdate(BaseModel):
+    status: str | None = None
+    triggers: list[dict[str, Any]] | None = None
+    concurrency: int | None = None
+    environment: str | None = None
+    secrets: list[str] | None = None
+    budget: dict[str, Any] | None = None
+    version: int | None = None

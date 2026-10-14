@@ -11,7 +11,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 EventType = Literal[
     "session.status",
@@ -50,6 +50,8 @@ def utcnow() -> datetime:
 
 
 class Event(BaseModel):
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
     id: str = Field(default_factory=lambda: new_id("evt"))
     session_id: str
     run_id: str | None = None

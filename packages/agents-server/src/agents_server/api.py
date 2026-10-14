@@ -22,10 +22,13 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from agents.events import Event
+from agents.sandbox.base import Environment
+from agents.spec import AgentSpec
 
 from . import metrics, schemas
 from .auth import Principal, Role, authenticate, create_key
@@ -35,6 +38,7 @@ from .service import Conflict, NotFound, PolicyError
 from .services import Services
 from .triggers import TriggerError, render_input, slack_url_verification, verify_webhook
 
+_HTTP_CODES = {400: "bad_request", 401: "unauthorized", 403: "forbidden", 404: "not_found", 409: "conflict", 413: "too_large", 429: "rate_limited"}
 SETTLED = {"idle", "waiting_input", "approval_pending", "failed", "terminated"}
 KEEPALIVE_S = 15.0
 
@@ -117,7 +121,12 @@ def create_app(services: Services | None = None) -> FastAPI:
         if owned:
             await svc.stop()
 
+    error_responses: dict[int | str, dict[str, Any]] = {
+        code: {"model": schemas.ErrorBody, "description": desc}
+        for code, desc in ((401, "Missing or invalid API key"), (403, "Forbidden"), (404, "Not found"), (409, "Conflict"), (422, "Invalid request"))
+    }
     app = FastAPI(
+        responses=error_responses,
         title="Managed Agents",
         version="0.1.0",
         description="Register agents, route requests to versions, and run them durably on your own infrastructure.",
@@ -130,6 +139,15 @@ def create_app(services: Services | None = None) -> FastAPI:
         return state["services"]
 
     # -- errors --
+
+    @app.exception_handler(RequestValidationError)
+    async def _validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
+        problems = [f"{'.'.join(str(x) for x in e['loc'])}: {e['msg']}" for e in exc.errors()]
+        return JSONResponse({"error": "invalid_request", "problems": problems}, status_code=422)
+
+    @app.exception_handler(HTTPException)
+    async def _http_error(_: Request, exc: HTTPException) -> JSONResponse:
+        return JSONResponse({"error": _HTTP_CODES.get(exc.status_code, "error"), "message": exc.detail}, status_code=exc.status_code)
 
     @app.exception_handler(RegistryError)
     async def _registry_error(_: Request, exc: RegistryError) -> JSONResponse:
@@ -198,7 +216,7 @@ def create_app(services: Services | None = None) -> FastAPI:
     # -- registry --
 
     @app.post("/v1/agents", status_code=201, tags=["agents"], response_model=schemas.RegisterResult)
-    async def register_agent(spec: dict[str, Any], response: Response, p: Principal = Depends(developer)) -> dict[str, Any]:
+    async def register_agent(spec: AgentSpec, response: Response, p: Principal = Depends(developer)) -> dict[str, Any]:
         platform = svc().platform
         row, created = await platform.registry.register(p.project_id, spec, p.actor, await platform.policy(p.project_id))
         if not created:
@@ -271,7 +289,7 @@ def create_app(services: Services | None = None) -> FastAPI:
         run = await platform.wait_for_run(inv_run, timeout=body.wait_timeout)
         return {**base, "status": run["status"], "stop_reason": run["stop_reason"], "output": run["output"], "error": run["error"], "usage": run["usage"]}
 
-    @app.post("/v1/agents/{target}/invoke", tags=["invoke"], response_model=None, responses={200: {"model": schemas.InvokeResult, "description": "mode=sync"}, 202: {"model": schemas.InvokeAccepted, "description": "mode=async"}, 201: {"content": {"text/event-stream": {}}, "description": "mode=stream"}})
+    @app.post("/v1/agents/{target}/invoke", tags=["invoke"], response_model=None, responses={200: {"model": schemas.InvokeResult, "description": "mode=sync (with mode=stream: text/event-stream of Events)", "content": {"text/event-stream": {"schema": {"type": "string"}}}}, 202: {"model": schemas.InvokeAccepted, "description": "mode=async"}})
     async def invoke(target: str, body: InvokeBody, p: Principal = Depends(developer)) -> Response | dict[str, Any]:
         inv = await svc().platform.invoke(p.project_id, target, body.input, actor=p.actor, metadata=body.metadata, trigger={"type": "api"})
         return await _respond(inv.session_id, inv.run_id, inv.route, body)
@@ -279,8 +297,8 @@ def create_app(services: Services | None = None) -> FastAPI:
     # -- deployments --
 
     @app.post("/v1/deployments", status_code=201, tags=["deployments"], response_model=schemas.Deployment)
-    async def create_deployment(body: dict[str, Any], p: Principal = Depends(developer)) -> dict[str, Any]:
-        dep = await svc().platform.create_deployment(p.project_id, body, p.actor)
+    async def create_deployment(body: schemas.DeploymentCreate, p: Principal = Depends(developer)) -> dict[str, Any]:
+        dep = await svc().platform.create_deployment(p.project_id, body.model_dump(), p.actor)
         svc().platform.router.cache.invalidate()
         return _deployment_view(dep, svc().settings.public_url, reveal=True)
 
@@ -294,8 +312,8 @@ def create_app(services: Services | None = None) -> FastAPI:
         return _deployment_view(await svc().platform.deployment(p.project_id, ref), svc().settings.public_url)
 
     @app.patch("/v1/deployments/{ref}", tags=["deployments"], response_model=schemas.Deployment)
-    async def update_deployment(ref: str, body: dict[str, Any], p: Principal = Depends(developer)) -> dict[str, Any]:
-        dep = await svc().platform.update_deployment(p.project_id, ref, body, p.actor)
+    async def update_deployment(ref: str, body: schemas.DeploymentUpdate, p: Principal = Depends(developer)) -> dict[str, Any]:
+        dep = await svc().platform.update_deployment(p.project_id, ref, body.model_dump(exclude_unset=True), p.actor)
         svc().platform.router.cache.invalidate()
         return _deployment_view(dep, svc().settings.public_url)
 
@@ -388,7 +406,13 @@ def create_app(services: Services | None = None) -> FastAPI:
         events = await svc().platform.events.read(session_id, after, limit)
         return {"events": [e.model_dump(mode="json") for e in events]}
 
-    @app.get("/v1/sessions/{session_id}/stream", tags=["sessions"], response_model=None)
+    @app.get(
+        "/v1/sessions/{session_id}/stream",
+        tags=["sessions"],
+        response_model=None,
+        response_class=StreamingResponse,
+        responses={200: {"content": {"text/event-stream": {"schema": {"type": "string"}}}, "description": "Server-sent events; each `data` is an Event"}},
+    )
     async def stream(
         session_id: str,
         after: int = 0,
@@ -455,7 +479,13 @@ def create_app(services: Services | None = None) -> FastAPI:
     async def artifacts(session_id: str, p: Principal = Depends(viewer)) -> dict[str, Any]:
         return {"artifacts": await svc().platform.list_artifacts(p.project_id, session_id)}
 
-    @app.get("/v1/sessions/{session_id}/artifacts/{artifact_id}", tags=["sessions"], response_model=None)
+    @app.get(
+        "/v1/sessions/{session_id}/artifacts/{artifact_id}",
+        tags=["sessions"],
+        response_model=None,
+        response_class=Response,
+        responses={200: {"content": {"application/octet-stream": {"schema": {"type": "string", "format": "binary"}}}, "description": "The file"}},
+    )
     async def download_artifact(session_id: str, artifact_id: str, p: Principal = Depends(viewer)) -> Response:
         row, data = await svc().platform.artifact(p.project_id, session_id, artifact_id)
         name = row["path"].rsplit("/", 1)[-1]
@@ -485,11 +515,8 @@ def create_app(services: Services | None = None) -> FastAPI:
         return Response(status_code=204)
 
     @app.post("/v1/environments", status_code=201, tags=["environments"], response_model=schemas.Environment)
-    async def put_environment(body: dict[str, Any], p: Principal = Depends(developer)) -> dict[str, Any]:
-        name = body.pop("name", None)
-        if not name:
-            raise ValueError("an environment needs a name")
-        return await svc().platform.put_environment(p.project_id, name, body, p.actor)
+    async def put_environment(body: Environment, p: Principal = Depends(developer)) -> dict[str, Any]:
+        return await svc().platform.put_environment(p.project_id, body.name, body.model_dump(exclude={"name"}), p.actor)
 
     @app.get("/v1/environments", tags=["environments"], response_model=schemas.EnvironmentList)
     async def list_environments(p: Principal = Depends(viewer)) -> dict[str, Any]:
