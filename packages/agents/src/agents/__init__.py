@@ -6,6 +6,7 @@
 from .adapters import AdapterRegistry
 from .adapters.base import ModelError
 from .agent import Agent
+from .client import APIError, AsyncClient, Client, RemoteSession
 from .events import Event
 from .runtime.runner import RunResult
 from .sandbox import Environment, Sandbox
@@ -17,7 +18,11 @@ from .tools.function import FunctionTool, tool
 __version__ = "0.1.0.dev0"
 
 __all__ = [
+    "APIError",
     "AdapterRegistry",
+    "AsyncClient",
+    "Client",
+    "RemoteSession",
     "Agent",
     "AgentSpec",
     "AsyncSession",

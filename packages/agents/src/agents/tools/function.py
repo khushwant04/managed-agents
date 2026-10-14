@@ -30,8 +30,10 @@ class FunctionTool:
         secrets: list[str] | None = None,
         model: type[BaseModel] | None = None,
         single_model_arg: bool = False,
+        script: str | None = None,
     ) -> None:
         self.fn = fn
+        self.script = script
         self.spec = spec
         self.url = url
         self.approval = approval or parse_approval("never")
@@ -61,6 +63,8 @@ class FunctionTool:
             ref["url"] = self.url
         if self.secrets:
             ref["secrets"] = self.secrets
+        if self.script and self.fn is not None:
+            ref["options"] = {"script": self.script, "entrypoint": self.fn.__name__}
         return ref
 
     async def invoke(self, arguments: dict[str, Any]) -> str:
@@ -93,6 +97,17 @@ def _default(obj: Any) -> Any:
     return str(obj)
 
 
+def _source(f: Callable[..., Any]) -> str:
+    """The function's source without decorators, for running in a sandbox."""
+    import textwrap
+
+    lines = textwrap.dedent(inspect.getsource(f)).splitlines()
+    start = next(i for i, line in enumerate(lines) if line.lstrip().startswith(("def ", "async def ")))
+    if lines[start].lstrip().startswith("async def"):
+        raise ValueError("sandbox tools must be plain (not async) functions")
+    return "\n".join(lines[start:]) + "\n"
+
+
 def tool(
     fn: Callable[..., Any] | None = None,
     *,
@@ -101,11 +116,17 @@ def tool(
     url: str | None = None,
     approval: Any = "never",
     secrets: list[str] | None = None,
+    sandbox: bool = False,
 ) -> Any:
     """Turn a function into a tool. Its schema comes from the type hints.
 
     A function taking a single Pydantic model receives the validated model;
     otherwise each parameter becomes a property of the input schema.
+
+    Hosted, a tool runs as a signed webhook at ``url``, or with
+    ``sandbox=True`` its source ships with the agent version and runs in the
+    session sandbox (it must be self-contained: imports inside the function,
+    plain JSON-able keyword arguments).
     """
 
     def wrap(f: Callable[..., Any]) -> FunctionTool:
@@ -139,6 +160,7 @@ def tool(
             secrets=secrets,
             model=model,
             single_model_arg=single,
+            script=_source(f) if sandbox else None,
         )
 
     return wrap(fn) if fn is not None else wrap

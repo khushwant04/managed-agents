@@ -363,6 +363,11 @@ def create_app(services: Services | None = None) -> FastAPI:
         s = await svc().platform.session(p.project_id, session_id)
         s.pop("sandbox", None)
         s["active_run"] = await svc().platform.queue.active_run(session_id)
+        last = await svc().pool.fetchrow(
+            "SELECT id, status, stop_reason, output, error, usage, model, enqueued_at, finished_at FROM runs WHERE session_id = $1 ORDER BY enqueued_at DESC LIMIT 1",
+            session_id,
+        )
+        s["last_run"] = dict(last) if last else None
         return s
 
     @app.post("/v1/sessions/{session_id}/events", tags=["sessions"])
