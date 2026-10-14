@@ -1,0 +1,26 @@
+[
+  {
+    "response": {
+      "id": "resp_07",
+      "created_at": 1760400000.0,
+      "error": null,
+      "incomplete_details": null,
+      "model": "gpt-5.5-2026-04-23",
+      "object": "response",
+      "output": [],
+      "parallel_tool_calls": true,
+      "tool_choice": "auto",
+      "tools": [],
+      "status": "in_progress"
+    },
+    "sequence_number": 0,
+    "type": "response.created"
+  },
+  {
+    "code": "rate_limit_exceeded",
+    "message": "Rate limit reached for gpt-5.5.",
+    "param": null,
+    "sequence_number": 1,
+    "type": "error"
+  }
+]

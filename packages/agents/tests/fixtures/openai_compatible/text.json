@@ -1,0 +1,80 @@
+[
+  {
+    "id": "chatcmpl-1",
+    "choices": [
+      {
+        "delta": {
+          "content": "",
+          "role": "assistant"
+        },
+        "index": 0,
+        "finish_reason": null,
+        "logprobs": null
+      }
+    ],
+    "created": 1760400000,
+    "model": "qwen3-coder:30b",
+    "object": "chat.completion.chunk"
+  },
+  {
+    "id": "chatcmpl-1",
+    "choices": [
+      {
+        "delta": {
+          "content": "Hello"
+        },
+        "index": 0,
+        "finish_reason": null,
+        "logprobs": null
+      }
+    ],
+    "created": 1760400000,
+    "model": "qwen3-coder:30b",
+    "object": "chat.completion.chunk"
+  },
+  {
+    "id": "chatcmpl-1",
+    "choices": [
+      {
+        "delta": {
+          "content": " world"
+        },
+        "index": 0,
+        "finish_reason": null,
+        "logprobs": null
+      }
+    ],
+    "created": 1760400000,
+    "model": "qwen3-coder:30b",
+    "object": "chat.completion.chunk"
+  },
+  {
+    "id": "chatcmpl-1",
+    "choices": [
+      {
+        "delta": {},
+        "index": 0,
+        "finish_reason": "stop",
+        "logprobs": null
+      }
+    ],
+    "created": 1760400000,
+    "model": "qwen3-coder:30b",
+    "object": "chat.completion.chunk"
+  },
+  {
+    "id": "chatcmpl-1",
+    "choices": [],
+    "created": 1760400000,
+    "model": "qwen3-coder:30b",
+    "object": "chat.completion.chunk",
+    "usage": {
+      "completion_tokens": 4,
+      "prompt_tokens": 120,
+      "total_tokens": 124,
+      "prompt_tokens_details": {
+        "cached_tokens": 64
+      }
+    }
+  }
+]

@@ -1,0 +1,211 @@
+[
+  {
+    "response": {
+      "id": "resp_02",
+      "created_at": 1760400000.0,
+      "error": null,
+      "incomplete_details": null,
+      "model": "gpt-5.5-2026-04-23",
+      "object": "response",
+      "output": [],
+      "parallel_tool_calls": true,
+      "tool_choice": "auto",
+      "tools": [],
+      "status": "in_progress"
+    },
+    "sequence_number": 0,
+    "type": "response.created"
+  },
+  {
+    "item": {
+      "arguments": "",
+      "call_id": "call_weather",
+      "name": "get_weather",
+      "type": "function_call",
+      "id": "fc_01",
+      "status": "in_progress"
+    },
+    "output_index": 0,
+    "sequence_number": 1,
+    "type": "response.output_item.added"
+  },
+  {
+    "delta": "{\"city\"",
+    "item_id": "fc_01",
+    "output_index": 0,
+    "sequence_number": 2,
+    "type": "response.function_call_arguments.delta"
+  },
+  {
+    "delta": ": \"Paris\"",
+    "item_id": "fc_01",
+    "output_index": 0,
+    "sequence_number": 3,
+    "type": "response.function_call_arguments.delta"
+  },
+  {
+    "delta": ", \"unit\": \"c\"}",
+    "item_id": "fc_01",
+    "output_index": 0,
+    "sequence_number": 4,
+    "type": "response.function_call_arguments.delta"
+  },
+  {
+    "arguments": "{\"city\": \"Paris\", \"unit\": \"c\"}",
+    "item_id": "fc_01",
+    "output_index": 0,
+    "sequence_number": 5,
+    "type": "response.function_call_arguments.done"
+  },
+  {
+    "item": {
+      "arguments": "{\"city\": \"Paris\", \"unit\": \"c\"}",
+      "call_id": "call_weather",
+      "name": "get_weather",
+      "type": "function_call",
+      "id": "fc_01",
+      "status": "completed"
+    },
+    "output_index": 0,
+    "sequence_number": 6,
+    "type": "response.output_item.done"
+  },
+  {
+    "item": {
+      "id": "sh_01",
+      "action": {
+        "commands": [],
+        "max_output_length": null,
+        "timeout_ms": null
+      },
+      "call_id": "call_shell",
+      "environment": {
+        "type": "local"
+      },
+      "status": "in_progress",
+      "type": "shell_call"
+    },
+    "output_index": 1,
+    "sequence_number": 7,
+    "type": "response.output_item.added"
+  },
+  {
+    "command": "",
+    "command_index": 0,
+    "output_index": 1,
+    "sequence_number": 8,
+    "type": "response.shell_call_command.added"
+  },
+  {
+    "command_index": 0,
+    "delta": "ls -la /workspace",
+    "output_index": 1,
+    "sequence_number": 9,
+    "type": "response.shell_call_command.delta"
+  },
+  {
+    "command": "ls -la /workspace",
+    "command_index": 0,
+    "output_index": 1,
+    "sequence_number": 10,
+    "type": "response.shell_call_command.done"
+  },
+  {
+    "command": "",
+    "command_index": 1,
+    "output_index": 1,
+    "sequence_number": 11,
+    "type": "response.shell_call_command.added"
+  },
+  {
+    "command_index": 1,
+    "delta": "cat README.md",
+    "output_index": 1,
+    "sequence_number": 12,
+    "type": "response.shell_call_command.delta"
+  },
+  {
+    "command": "cat README.md",
+    "command_index": 1,
+    "output_index": 1,
+    "sequence_number": 13,
+    "type": "response.shell_call_command.done"
+  },
+  {
+    "item": {
+      "id": "sh_01",
+      "action": {
+        "commands": [
+          "ls -la /workspace",
+          "cat README.md"
+        ],
+        "max_output_length": 4096,
+        "timeout_ms": 30000
+      },
+      "call_id": "call_shell",
+      "environment": {
+        "type": "local"
+      },
+      "status": "completed",
+      "type": "shell_call"
+    },
+    "output_index": 1,
+    "sequence_number": 14,
+    "type": "response.output_item.done"
+  },
+  {
+    "response": {
+      "id": "resp_02",
+      "created_at": 1760400000.0,
+      "error": null,
+      "incomplete_details": null,
+      "model": "gpt-5.5-2026-04-23",
+      "object": "response",
+      "output": [
+        {
+          "arguments": "{\"city\": \"Paris\", \"unit\": \"c\"}",
+          "call_id": "call_weather",
+          "name": "get_weather",
+          "type": "function_call",
+          "id": "fc_01",
+          "status": "completed"
+        },
+        {
+          "id": "sh_01",
+          "action": {
+            "commands": [
+              "ls -la /workspace",
+              "cat README.md"
+            ],
+            "max_output_length": 4096,
+            "timeout_ms": 30000
+          },
+          "call_id": "call_shell",
+          "environment": {
+            "type": "local"
+          },
+          "status": "completed",
+          "type": "shell_call"
+        }
+      ],
+      "parallel_tool_calls": true,
+      "tool_choice": "auto",
+      "tools": [],
+      "status": "completed",
+      "usage": {
+        "input_tokens": 900,
+        "input_tokens_details": {
+          "cache_write_tokens": 0,
+          "cached_tokens": 0
+        },
+        "output_tokens": 60,
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "total_tokens": 960
+      }
+    },
+    "sequence_number": 15,
+    "type": "response.completed"
+  }
+]

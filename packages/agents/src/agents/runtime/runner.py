@@ -46,7 +46,10 @@ COMPACTION_PROMPT = (
 
 
 class SteeringQueue:
-    """Input sent mid-run; injected at the next step boundary."""
+    """Input sent mid-run; injected at the next step boundary.
+
+    The hosted runtime subclasses this to read queued input from Postgres.
+    """
 
     def __init__(self) -> None:
         self._items: list[Message] = []
@@ -54,12 +57,12 @@ class SteeringQueue:
     def put(self, message: Message) -> None:
         self._items.append(message)
 
-    def drain(self) -> list[Message]:
+    async def take(self) -> list[Message]:
         items, self._items = self._items, []
         return items
 
-    def __len__(self) -> int:
-        return len(self._items)
+    async def pending(self) -> bool:
+        return bool(self._items)
 
 
 @dataclass
@@ -171,7 +174,7 @@ class Runner:
 
                 calls = response.message.tool_calls
                 if not calls:
-                    if len(ctx.steering):
+                    if await ctx.steering.pending():
                         continue  # input arrived while the model was answering
                     return await self._finish(ctx, "end_turn", usage, builder, last_model)
 
@@ -237,8 +240,8 @@ class Runner:
     async def _steer(self, ctx: RunContext, builder: TranscriptBuilder, step: int) -> None:
         key = f"steer:{step}"
         done = await self.steps.get(ctx.run_id, key)
-        if done is None and len(ctx.steering):
-            messages = ctx.steering.drain()
+        messages = await ctx.steering.take() if done is None else []
+        if messages:
             sid = await self.steps.begin(StepSpec(session_id=ctx.session_id, run_id=ctx.run_id, key=key, type="input"))
             await self.steps.complete(sid, {"messages": [m.model_dump(mode="json") for m in messages]})
             for m in messages:

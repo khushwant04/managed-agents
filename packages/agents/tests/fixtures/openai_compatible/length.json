@@ -1,0 +1,45 @@
+[
+  {
+    "id": "chatcmpl-4",
+    "choices": [
+      {
+        "delta": {
+          "content": "Once upon",
+          "role": "assistant"
+        },
+        "index": 0,
+        "finish_reason": null,
+        "logprobs": null
+      }
+    ],
+    "created": 1760400000,
+    "model": "qwen3-coder:30b",
+    "object": "chat.completion.chunk"
+  },
+  {
+    "id": "chatcmpl-4",
+    "choices": [
+      {
+        "delta": {},
+        "index": 0,
+        "finish_reason": "length",
+        "logprobs": null
+      }
+    ],
+    "created": 1760400000,
+    "model": "qwen3-coder:30b",
+    "object": "chat.completion.chunk"
+  },
+  {
+    "id": "chatcmpl-4",
+    "choices": [],
+    "created": 1760400000,
+    "model": "qwen3-coder:30b",
+    "object": "chat.completion.chunk",
+    "usage": {
+      "completion_tokens": 2,
+      "prompt_tokens": 20,
+      "total_tokens": 22
+    }
+  }
+]

@@ -1,0 +1,151 @@
+[
+  {
+    "id": "chatcmpl-2",
+    "choices": [
+      {
+        "delta": {
+          "content": null,
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "index": 0,
+              "id": "call_a",
+              "function": {
+                "arguments": "",
+                "name": "shell"
+              },
+              "type": "function"
+            }
+          ]
+        },
+        "index": 0,
+        "finish_reason": null,
+        "logprobs": null
+      }
+    ],
+    "created": 1760400000,
+    "model": "qwen3-coder:30b",
+    "object": "chat.completion.chunk"
+  },
+  {
+    "id": "chatcmpl-2",
+    "choices": [
+      {
+        "delta": {
+          "tool_calls": [
+            {
+              "index": 0,
+              "function": {
+                "arguments": "{\"comm"
+              }
+            }
+          ]
+        },
+        "index": 0,
+        "finish_reason": null,
+        "logprobs": null
+      }
+    ],
+    "created": 1760400000,
+    "model": "qwen3-coder:30b",
+    "object": "chat.completion.chunk"
+  },
+  {
+    "id": "chatcmpl-2",
+    "choices": [
+      {
+        "delta": {
+          "tool_calls": [
+            {
+              "index": 0,
+              "function": {
+                "arguments": "and\": \"ls\"}"
+              }
+            }
+          ]
+        },
+        "index": 0,
+        "finish_reason": null,
+        "logprobs": null
+      }
+    ],
+    "created": 1760400000,
+    "model": "qwen3-coder:30b",
+    "object": "chat.completion.chunk"
+  },
+  {
+    "id": "chatcmpl-2",
+    "choices": [
+      {
+        "delta": {
+          "tool_calls": [
+            {
+              "index": 1,
+              "id": "call_b",
+              "function": {
+                "arguments": "",
+                "name": "get_weather"
+              },
+              "type": "function"
+            }
+          ]
+        },
+        "index": 0,
+        "finish_reason": null,
+        "logprobs": null
+      }
+    ],
+    "created": 1760400000,
+    "model": "qwen3-coder:30b",
+    "object": "chat.completion.chunk"
+  },
+  {
+    "id": "chatcmpl-2",
+    "choices": [
+      {
+        "delta": {
+          "tool_calls": [
+            {
+              "index": 1,
+              "function": {
+                "arguments": "{\"city\": \"Oslo\"}"
+              }
+            }
+          ]
+        },
+        "index": 0,
+        "finish_reason": null,
+        "logprobs": null
+      }
+    ],
+    "created": 1760400000,
+    "model": "qwen3-coder:30b",
+    "object": "chat.completion.chunk"
+  },
+  {
+    "id": "chatcmpl-2",
+    "choices": [
+      {
+        "delta": {},
+        "index": 0,
+        "finish_reason": "tool_calls",
+        "logprobs": null
+      }
+    ],
+    "created": 1760400000,
+    "model": "qwen3-coder:30b",
+    "object": "chat.completion.chunk"
+  },
+  {
+    "id": "chatcmpl-2",
+    "choices": [],
+    "created": 1760400000,
+    "model": "qwen3-coder:30b",
+    "object": "chat.completion.chunk",
+    "usage": {
+      "completion_tokens": 40,
+      "prompt_tokens": 300,
+      "total_tokens": 340
+    }
+  }
+]

@@ -1,0 +1,55 @@
+[
+  {
+    "id": "chatcmpl-3",
+    "choices": [
+      {
+        "delta": {
+          "role": "assistant",
+          "tool_calls": [
+            {
+              "index": 0,
+              "id": "call_c",
+              "function": {
+                "arguments": "{\"city\": ",
+                "name": "get_weather"
+              },
+              "type": "function"
+            }
+          ]
+        },
+        "index": 0,
+        "finish_reason": null,
+        "logprobs": null
+      }
+    ],
+    "created": 1760400000,
+    "model": "qwen3-coder:30b",
+    "object": "chat.completion.chunk"
+  },
+  {
+    "id": "chatcmpl-3",
+    "choices": [
+      {
+        "delta": {},
+        "index": 0,
+        "finish_reason": "tool_calls",
+        "logprobs": null
+      }
+    ],
+    "created": 1760400000,
+    "model": "qwen3-coder:30b",
+    "object": "chat.completion.chunk"
+  },
+  {
+    "id": "chatcmpl-3",
+    "choices": [],
+    "created": 1760400000,
+    "model": "qwen3-coder:30b",
+    "object": "chat.completion.chunk",
+    "usage": {
+      "completion_tokens": 7,
+      "prompt_tokens": 80,
+      "total_tokens": 87
+    }
+  }
+]

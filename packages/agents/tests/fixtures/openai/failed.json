@@ -1,0 +1,39 @@
+[
+  {
+    "response": {
+      "id": "resp_06",
+      "created_at": 1760400000.0,
+      "error": null,
+      "incomplete_details": null,
+      "model": "gpt-5.5-2026-04-23",
+      "object": "response",
+      "output": [],
+      "parallel_tool_calls": true,
+      "tool_choice": "auto",
+      "tools": [],
+      "status": "in_progress"
+    },
+    "sequence_number": 0,
+    "type": "response.created"
+  },
+  {
+    "response": {
+      "id": "resp_06",
+      "created_at": 1760400000.0,
+      "error": {
+        "code": "server_error",
+        "message": "The server had an error processing your request."
+      },
+      "incomplete_details": null,
+      "model": "gpt-5.5-2026-04-23",
+      "object": "response",
+      "output": [],
+      "parallel_tool_calls": true,
+      "tool_choice": "auto",
+      "tools": [],
+      "status": "failed"
+    },
+    "sequence_number": 1,
+    "type": "response.failed"
+  }
+]

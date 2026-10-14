@@ -23,8 +23,13 @@ class _Block(BaseModel):
 
 
 class TextBlock(_Block):
+    """Text. ``vendor``/``raw`` keep vendor fields that must be resent, such as
+    the ``phase`` OpenAI puts on assistant messages."""
+
     type: Literal["text"] = "text"
     text: str
+    vendor: Vendor | None = None
+    raw: dict[str, Any] = Field(default_factory=dict)
 
 
 class ThinkingBlock(_Block):
