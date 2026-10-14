@@ -240,3 +240,30 @@ async def test_secrets_are_encrypted_and_audited(h):
     actions = [r["action"] for r in await h.services.pool.fetch("SELECT action FROM audit_log WHERE target = 'OBS_TOKEN' ORDER BY id")]
     assert actions == ["secret.write", "secret.write", "secret.read"]
     assert [s["name"] for s in await secrets.list(h.project)] == ["OBS_TOKEN"]
+
+
+async def test_resumed_parent_reuses_its_child_session(h):
+    """A parent that dies while its child runs must not start a second child on resume."""
+    await h.register(Agent("helper", "scripted", tools=["shell"]))
+    await h.register(Agent("boss", "scripted", tools=[{"agent": "helper@prod"}]))
+    h.adapter.turns += [
+        call("call_helper", {"input": "work"}, id="c"),
+        call("shell", {"command": "if [ -f /workspace/go ]; then echo fast; else sleep 30; fi"}, id="slow"),
+    ]
+    inv = await h.platform.invoke(h.project, "boss", "go", actor="key:test")
+    task = asyncio.create_task(h.worker("w1").run_once())
+    for _ in range(100):
+        if await h.services.pool.fetchval("SELECT 1 FROM steps WHERE key = 'tool:slow'"):
+            break
+        await asyncio.sleep(0.05)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    child = await h.services.pool.fetchrow("SELECT * FROM sessions WHERE parent_session_id = $1", inv.session_id)
+    open(f"{child['sandbox']['data']['dir']}/go", "w").close()
+    await h.services.pool.execute("UPDATE runs SET lease_until = now() - interval '1 second'")
+    h.adapter.turns[:] = [text("child finished"), text("boss finished")]
+    assert await h.worker("w2").run_once()
+    assert (await h.run(inv.session_id))["output"] == "boss finished"
+    children = await h.services.pool.fetch("SELECT id FROM sessions WHERE parent_session_id = $1", inv.session_id)
+    assert [c["id"] for c in children] == [child["id"]]

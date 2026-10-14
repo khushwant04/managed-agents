@@ -488,6 +488,9 @@ class Worker:
         target = str(ref.options.get("agent", ref.name))
 
         async def call_agent(args: dict[str, Any], ctx: CallContext) -> str:
+            existing = await self._existing_child(ctx)
+            if existing:
+                return await self._run_child(session, existing["session_id"], existing["id"], ctx, label=target)
             inv = await self.platform.invoke(
                 session["project_id"],
                 target if "@" in target else f"{target}@prod",
@@ -515,6 +518,9 @@ class Worker:
             if args.get("tools"):
                 allowed &= set(args["tools"])
             async with slots:
+                existing = await self._existing_child(ctx)
+                if existing:
+                    return await self._run_child(session, existing["session_id"], existing["id"], ctx, label="subagent")
                 inv = await self.platform.invoke(
                     session["project_id"],
                     f"{spec.name}@{session['version']}",
@@ -533,6 +539,14 @@ class Worker:
 
         return spawn
 
+    async def _existing_child(self, ctx: CallContext) -> dict[str, Any] | None:
+        """The child run a previous attempt of this tool call started, if any (resume after a crash)."""
+        rec = await self.pool.fetchrow(
+            "SELECT id, session_id FROM runs WHERE trigger->>'parent_run_id' = $1 AND trigger->>'call_id' = $2 ORDER BY enqueued_at LIMIT 1",
+            ctx.run_id, ctx.call_id,
+        )  # fmt: skip
+        return dict(rec) if rec else None
+
     async def _run_child(self, parent: dict[str, Any], child_session: str, child_run: str, ctx: CallContext, *, label: str) -> str:
         """Run a child session's first run inline in this worker (no slot needed, so no deadlock)."""
         await self.platform.events.append(
@@ -542,7 +556,7 @@ class Worker:
             """
             UPDATE runs SET status = 'running', worker_id = $2, attempts = attempts + 1,
                    lease_until = now() + make_interval(secs => $3), started_at = now()
-            WHERE id = $1 AND status = 'queued' RETURNING *
+            WHERE id = $1 AND (status = 'queued' OR (status = 'running' AND lease_until < now())) RETURNING *
             """,
             child_run, self.worker_id, float(self.lease_seconds),
         )  # fmt: skip

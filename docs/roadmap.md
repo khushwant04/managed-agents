@@ -2,6 +2,17 @@
 
 Ship v0.1 with the Python SDK in about eight weeks: registry, router, runtime with both adapters, E2B sandboxes and the Python SDK. Each phase ends on a gate that proves the riskiest assumption first.
 
+## Progress (2026-10-14)
+
+| Phase | State |
+| --- | --- |
+| 1. Runtime core | Done. Gate 1 passes in CI: `test_worker_killed_mid_run_is_resumed_by_another` |
+| 2. Portability | Done: Anthropic, OpenAI and OpenAI-compatible adapters, E2B/Docker/local sandboxes, MCP and webhook tools. Gate 2 (same task on Claude and GPT) needs a live run of `examples/incident-investigator/benchmark.py` |
+| 3. Registry and router | Done |
+| 4. Hosting | Done. Gate 3 is covered by the API tests (routing through weighted aliases, deployments, triggers) |
+| 5. Release | Built: Python client, CLI, Compose, Dockerfiles, CI, demo and benchmark. Remaining: live runs with API keys, E2B template build, ADR-0015 names, ADR-0016 license, PyPI publish |
+| After v0.1 | Built ahead of schedule: TypeScript client and React hooks, dashboard, Helm chart with KEDA, OpenTelemetry spans |
+
 ## Phases and gates
 
 > The plan's roadmap diagram (5 phases, 3 gates) was not included in the exported document. The breakdown below is reconstructed from the plan's v0.1 scope and risks; adjust it if the original differs.
