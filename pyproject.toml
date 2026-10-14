@@ -24,6 +24,7 @@ dev = [
   "pytest-cov>=5.0",
   "ruff>=0.6",
   "mypy>=1.11",
+  "opentelemetry-sdk>=1.27",
 ]
 
 [tool.pytest.ini_options]

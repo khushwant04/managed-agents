@@ -155,6 +155,12 @@ class Worker:
                 inputs=[Message.model_validate(m) for m in run["input"]],
                 system=system_prompt(spec, has_sandbox=handle is not None),
                 steering=PostgresSteeringQueue(self.pool, run["id"]),
+                attributes={
+                    "agents.agent.version": session["version"],
+                    "agents.route.alias": session["alias"],
+                    "agents.project_id": project_id,
+                    "agents.deployment_id": session["deployment_id"],
+                },
             )
             if run["attempts"] == 1:
                 await self.platform.set_status(session["id"], "running", run_id=run["id"])

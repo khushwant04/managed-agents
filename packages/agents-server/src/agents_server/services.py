@@ -43,6 +43,7 @@ class Services:
         run_migrations: bool = True,
     ) -> Services:
         settings = settings or Settings()
+        setup_tracing()
         pool = pool or await create_pool(settings.database_url, max_size=20)
         if run_migrations:
             await migrate(pool)
@@ -89,3 +90,31 @@ class Services:
         if self.hub is not None:
             await self.hub.stop()
         await self.pool.close()
+
+
+_tracing_ready = False
+
+
+def setup_tracing() -> bool:
+    """Export spans over OTLP when ``OTEL_EXPORTER_OTLP_ENDPOINT`` is set (needs the ``otel`` extra)."""
+    global _tracing_ready
+    import os
+
+    if _tracing_ready or not os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
+        return _tracing_ready
+    try:
+        from opentelemetry import trace
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+    except ImportError:
+        import logging
+
+        logging.getLogger("agents").warning("OTEL_EXPORTER_OTLP_ENDPOINT is set but the otel extra is not installed")
+        return False
+    provider = TracerProvider(resource=Resource.create({"service.name": os.environ.get("OTEL_SERVICE_NAME", "managed-agents")}))
+    provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+    trace.set_tracer_provider(provider)
+    _tracing_ready = True
+    return True

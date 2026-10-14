@@ -16,6 +16,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from .. import tracing
 from ..adapters import AdapterRegistry
 from ..adapters.base import ModelError
 from ..events import Event, EventType, RunStopReason
@@ -77,6 +78,8 @@ class RunContext:
     steering: SteeringQueue = field(default_factory=SteeringQueue)
     history: list[Message] | None = None
     """Transcript before this run; derived from the session's steps when omitted."""
+    attributes: dict[str, Any] = field(default_factory=dict)
+    """Extra span attributes, such as the agent version and resolved alias."""
 
 
 @dataclass
@@ -116,6 +119,19 @@ class Runner:
     # -- the loop ---------------------------------------------------------
 
     async def run(self, ctx: RunContext) -> RunResult:
+        attrs = tracing.run_attributes(agent=ctx.spec.name, session_id=ctx.session_id, run_id=ctx.run_id, extra=ctx.attributes)
+        with tracing.span(f"invoke_agent {ctx.spec.name}", attrs) as sp:
+            result = await self._run(ctx)
+            sp.set_attributes(
+                {
+                    "agents.stop_reason": result.stop_reason,
+                    "gen_ai.usage.input_tokens": result.usage.input_tokens,
+                    "gen_ai.usage.output_tokens": result.usage.output_tokens,
+                }
+            )
+            return result
+
+    async def _run(self, ctx: RunContext) -> RunResult:
         spec = ctx.spec
         started = self.clock()
         usage = Usage()
@@ -290,13 +306,15 @@ class Runner:
             )
             response: ModelResponse | None = None
             try:
-                async for delta in adapter.stream(req):
-                    if isinstance(delta, TextDelta):
-                        await self._emit(ctx, "message.agent.delta", {"text": delta.text}, model=name)
-                    elif isinstance(delta, ThinkingDelta):
-                        await self._emit(ctx, "thinking.delta", {"text": delta.text}, model=name)
-                    elif isinstance(delta, ModelResponse):
-                        response = delta
+                with tracing.span(f"chat {name}", tracing.model_attributes(vendor=adapter.id, model=name, extra=ctx.attributes)) as sp:
+                    async for delta in adapter.stream(req):
+                        if isinstance(delta, TextDelta):
+                            await self._emit(ctx, "message.agent.delta", {"text": delta.text}, model=name)
+                        elif isinstance(delta, ThinkingDelta):
+                            await self._emit(ctx, "thinking.delta", {"text": delta.text}, model=name)
+                        elif isinstance(delta, ModelResponse):
+                            response = delta
+                            sp.set_attributes(tracing.usage_attributes(delta))
             except ModelError as exc:
                 if not exc.should_fall_back or i == len(spec.models) - 1:
                     raise
@@ -375,10 +393,12 @@ class Runner:
             )
         )
         cctx = CallContext(session_id=ctx.session_id, run_id=ctx.run_id, call_id=call.id, idempotency_key=f"{ctx.run_id}:{key}")
-        try:
-            result = await ctx.executor.execute(call, cctx)
-        except Exception as exc:  # executor bugs become failed results, not crashed runs
-            result = ToolResultBlock(call_id=call.id, content=f"Tool failed: {exc}", is_error=True, native_name=call.native_name)
+        with tracing.span(f"execute_tool {call.name}", tracing.tool_attributes(name=call.name, call_id=call.id, extra=ctx.attributes)) as sp:
+            try:
+                result = await ctx.executor.execute(call, cctx)
+            except Exception as exc:  # executor bugs become failed results, not crashed runs
+                result = ToolResultBlock(call_id=call.id, content=f"Tool failed: {exc}", is_error=True, native_name=call.native_name)
+            sp.set_attribute("agents.tool.is_error", result.is_error)
         await self.steps.complete(sid, {"result": result.model_dump(mode="json")})
         await self._emit(
             ctx, "tool.result", {"id": call.id, "name": call.name, "content": result.content, "is_error": result.is_error}
