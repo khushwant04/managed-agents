@@ -39,6 +39,13 @@ async def _with_services(fn, settings: Settings) -> None:  # type: ignore[no-unt
 
 
 async def _worker(services, stop) -> None:  # type: ignore[no-untyped-def]
+    import os
+
+    from prometheus_client import start_http_server
+
+    port = int(os.environ.get("AGENTS_METRICS_PORT", "9090"))
+    if port:
+        start_http_server(port)  # workers have no API; Prometheus scrapes this port
     await services.worker().run_forever(stop, poll_interval=services.settings.poll_interval, hub=services.hub)
 
 

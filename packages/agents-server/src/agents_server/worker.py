@@ -167,7 +167,8 @@ class Worker:
             else:
                 await self.platform.set_status(session["id"], "running", run_id=run["id"], resumed=True, attempt=run["attempts"])
                 metrics.SESSIONS_RESUMED.inc()
-            result = await self._run_with_lease(ctx, run)
+            runner = Runner(self.adapters, self.platform.steps, metrics.MetricsEventLog(self.platform.events, spec.name, started))
+            result = await self._run_with_lease(ctx, run, runner)
         except LeaseLost:
             log.warning("run %s: lease lost; another worker owns it now", run["id"])
             return None
@@ -187,11 +188,11 @@ class Worker:
             with contextlib.suppress(Exception):
                 await self._sync_memory_out(project_id, spec.name, provider, handle)
         tool_calls = await self.pool.fetchval("SELECT count(*) FROM steps WHERE run_id = $1 AND type = 'tool'", run["id"])
-        await self._finish(run, session, result, started if handle else None, tool_calls, deployment)
+        await self._finish(run, session, result, started, tool_calls, deployment, sandboxed=handle is not None)
         return result
 
-    async def _run_with_lease(self, ctx: RunContext, run: dict[str, Any]) -> RunResult:
-        task = asyncio.create_task(self.runner.run(ctx))
+    async def _run_with_lease(self, ctx: RunContext, run: dict[str, Any], runner: Runner | None = None) -> RunResult:
+        task = asyncio.create_task((runner or self.runner).run(ctx))
         lost = False
         cancelled = False
         interval = max(self.lease_seconds / 3, 0.2)
@@ -232,6 +233,8 @@ class Worker:
         sandbox_since: float | None,
         tool_calls: int,
         deployment: dict[str, Any] | None = None,
+        *,
+        sandboxed: bool = False,
     ) -> None:
         status = "waiting" if result.stop_reason == "approval_pending" else "finished"
         if result.stop_reason == "interrupted":
@@ -282,9 +285,11 @@ class Worker:
             """,
             session["project_id"], deployment["id"] if deployment else session["deployment_id"], session["id"], run["id"], result.model,
             u.input_tokens, u.output_tokens, u.cache_read_tokens, u.cache_write_tokens,
-            time.monotonic() - sandbox_since if sandbox_since else 0.0, tool_calls,
+            time.monotonic() - sandbox_since if sandbox_since and sandboxed else 0.0, tool_calls,
         )  # fmt: skip
         metrics.record_run(result, session["agent"])
+        if sandbox_since is not None:
+            metrics.RUN_LATENCY.labels(session["agent"]).observe(time.monotonic() - sandbox_since)
 
     # -- sandboxes ---------------------------------------------------------
 

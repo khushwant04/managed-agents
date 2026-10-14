@@ -292,3 +292,19 @@ async def test_input_arriving_as_a_run_finishes_starts_a_follow_up_run(h):
     final = await h.run(inv.session_id)
     assert final["output"] == "late answer"
     assert h.adapter.requests[-1].messages[-1].text == "late question"
+
+
+async def test_runs_record_prometheus_metrics(h):
+    from agents.adapters.base import ModelError
+    from agents_server import metrics
+
+    await h.register(Agent("metered", ["scripted", "scripted"], tools=["shell"]))
+    before_ok = metrics.TOOL_CALLS.labels("shell", "ok")._value.get()
+    before_err = metrics.PROVIDER_ERRORS.labels("scripted", "rate_limit")._value.get()
+    h.adapter.turns += [ModelError("rate_limit", "429", status=429), call("shell", {"command": "true"}, id="m"), text("done")]
+    await h.platform.invoke(h.project, "metered", "go", actor="key:test")
+    await h.worker().run_once()
+    assert metrics.TOOL_CALLS.labels("shell", "ok")._value.get() == before_ok + 1
+    assert metrics.PROVIDER_ERRORS.labels("scripted", "rate_limit")._value.get() == before_err + 1
+    assert metrics.TIME_TO_FIRST_TOKEN.labels("metered")._sum.get() > 0
+    assert metrics.RUNS.labels("metered", "end_turn")._value.get() >= 1

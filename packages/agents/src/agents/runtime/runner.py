@@ -322,7 +322,7 @@ class Runner:
                 await self._emit(
                     ctx,
                     "error",
-                    {"kind": "model_fallback", "message": str(exc), "from": model, "to": spec.models[i + 1], "fatal": False},
+                    {"kind": "model_fallback", "reason": exc.kind, "message": str(exc), "from": model, "to": spec.models[i + 1], "fatal": False},
                 )
                 continue
             if response is None:
@@ -331,7 +331,7 @@ class Runner:
                 await self._emit(
                     ctx,
                     "error",
-                    {"kind": "model_fallback", "message": "refusal", "from": model, "to": spec.models[i + 1], "fatal": False},
+                    {"kind": "model_fallback", "reason": "refusal", "message": "refusal", "from": model, "to": spec.models[i + 1], "fatal": False},
                 )
                 continue
             return response

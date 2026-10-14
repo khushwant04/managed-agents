@@ -22,6 +22,11 @@ spec:
         {{- end }}
       annotations:
         {{- include "managed-agents.podAnnotations" (dict "root" . "values" $v) | nindent 8 }}
+        {{- if $v.metrics.enabled }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ $v.metrics.port | quote }}
+        prometheus.io/path: /metrics
+        {{- end }}
     spec:
       {{- include "managed-agents.podCommon" (dict "root" . "values" $v) | nindent 6 }}
       terminationGracePeriodSeconds: {{ $v.terminationGracePeriodSeconds }}
@@ -39,6 +44,15 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            # Workers serve Prometheus metrics on this port (0 disables it).
+            - name: AGENTS_METRICS_PORT
+              value: {{ ternary $v.metrics.port 0 $v.metrics.enabled | quote }}
+          {{- if $v.metrics.enabled }}
+          ports:
+            - name: metrics
+              containerPort: {{ $v.metrics.port }}
+              protocol: TCP
+          {{- end }}
           {{- with .Values.securityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}

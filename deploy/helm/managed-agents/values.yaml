@@ -161,6 +161,10 @@ worker:
   # Runs survive a worker being killed (lease expiry hands them to another
   # worker), but a long grace period lets in-flight steps finish.
   terminationGracePeriodSeconds: 120
+  # Workers serve their own Prometheus metrics (runs, tokens, time to first token, tool calls).
+  metrics:
+    enabled: true
+    port: 9090
   resources:
     requests:
       cpu: 250m

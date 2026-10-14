@@ -42,3 +42,32 @@ def record_run(result: Any, agent: str) -> None:
 
 def render() -> tuple[bytes, str]:
     return generate_latest(), CONTENT_TYPE_LATEST
+
+
+class MetricsEventLog:
+    """Wraps an event log to record time to first token, provider errors and tool outcomes."""
+
+    def __init__(self, inner: Any, agent: str, started: float) -> None:
+        self.inner = inner
+        self.agent = agent
+        self.started = started
+        self._first_token = False
+
+    async def append(self, event: Any) -> Any:
+        import time
+
+        if event.type == "message.agent.delta" and not self._first_token:
+            self._first_token = True
+            TIME_TO_FIRST_TOKEN.labels(self.agent).observe(time.monotonic() - self.started)
+        elif event.type == "tool.result":
+            TOOL_CALLS.labels(event.payload.get("name", "unknown"), "error" if event.payload.get("is_error") else "ok").inc()
+        elif event.type == "error":
+            p = event.payload
+            if p.get("kind") == "model_fallback":
+                PROVIDER_ERRORS.labels(p.get("from", "unknown"), p.get("reason", "unknown")).inc()
+            elif p.get("kind") in ("rate_limit", "server", "connection", "refusal", "bad_request", "auth"):
+                PROVIDER_ERRORS.labels(event.model or "unknown", p["kind"]).inc()
+        return await self.inner.append(event)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self.inner, name)
