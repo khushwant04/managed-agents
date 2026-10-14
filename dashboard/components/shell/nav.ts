@@ -1,13 +1,14 @@
 import {
   ActivityIcon,
-  BlocksIcon,
   BookOpenIcon,
   BotIcon,
   BoxIcon,
   ChartColumnIcon,
   FlaskConicalIcon,
   KeyRoundIcon,
-  LayoutDashboardIcon,
+  HammerIcon,
+  HouseIcon,
+  ChartLineIcon,
   LockKeyholeIcon,
   type LucideIcon,
   RocketIcon,
@@ -36,11 +37,11 @@ export const isGroup = (e: NavEntry): e is NavGroup => "items" in e
 
 /** The console's navigation, shared by the sidebar and the command menu. */
 export const NAV: NavEntry[] = [
-  { title: "Dashboard", href: "/", icon: LayoutDashboardIcon, keywords: ["home", "overview"] },
+  { title: "Dashboard", href: "/", icon: HouseIcon, keywords: ["home", "overview"] },
   { title: "API keys", href: "/api-keys", icon: KeyRoundIcon, keywords: ["keys", "token", "auth"] },
   {
     title: "Build",
-    icon: BlocksIcon,
+    icon: HammerIcon,
     items: [
       { title: "Playground", href: "/playground", icon: FlaskConicalIcon, keywords: ["run", "invoke", "try"] },
       { title: "Agents", href: "/agents", icon: BotIcon, keywords: ["versions", "aliases", "register"] },
@@ -60,7 +61,7 @@ export const NAV: NavEntry[] = [
   { title: "Sessions", href: "/sessions", icon: ActivityIcon, keywords: ["runs", "timeline", "replay", "events"] },
   {
     title: "Analytics",
-    icon: ChartColumnIcon,
+    icon: ChartLineIcon,
     items: [
       { title: "Usage", href: "/usage", icon: ChartColumnIcon, keywords: ["tokens", "cost", "caching"] },
       { title: "Logs", href: "/logs", icon: ScrollTextIcon, keywords: ["audit", "activity"] },

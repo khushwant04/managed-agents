@@ -42,9 +42,10 @@ export function SiteHeader() {
   const pathname = usePathname()
   const crumbs = crumbsFor(pathname)
   return (
-    <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur-md supports-backdrop-filter:bg-background/65">
-      <SidebarTrigger className="-ml-0.5" />
-      <Separator orientation="vertical" className="mr-1 data-vertical:h-4 data-vertical:self-center" />
+    <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b bg-background/80 px-3 md:px-5 backdrop-blur-md supports-backdrop-filter:bg-background/65">
+      {/* The sidebar carries its own toggle on desktop; phones open it from here. */}
+      <SidebarTrigger className="-ml-0.5 md:hidden" />
+      <Separator orientation="vertical" className="mr-1 data-vertical:h-4 data-vertical:self-center md:hidden" />
       <Breadcrumb className="min-w-0 flex-1">
         <BreadcrumbList className="flex-nowrap">
           <AnimatePresence mode="popLayout" initial={false}>
