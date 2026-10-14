@@ -130,7 +130,7 @@ function ProjectSwitcher() {
           />
         }
       >
-        <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-xs font-semibold text-sidebar-primary-foreground shadow-button">
+        <div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-xs font-semibold text-sidebar-primary-foreground shadow-button">
           {initials(project.name)}
         </div>
         <div className="grid flex-1 text-left leading-tight">
@@ -196,7 +196,7 @@ function UserFooter() {
       <DropdownMenuTrigger
         render={<SidebarMenuButton size="lg" className="data-popup-open:bg-sidebar-accent" />}
       >
-        <div className="flex size-8 items-center justify-center rounded-full bg-sidebar-accent text-xs font-medium ring-1 ring-sidebar-border">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-accent text-xs font-medium ring-1 ring-sidebar-border">
           {initials(project.role)}
         </div>
         <div className="grid flex-1 text-left leading-tight">
@@ -233,7 +233,7 @@ function UserFooter() {
 export function AppSidebar({ onSearch }: { onSearch: () => void }) {
   const pathname = usePathname()
   return (
-    <Sidebar variant="inset" collapsible="icon">
+    <Sidebar variant="sidebar" collapsible="icon">
       <SidebarHeader className="gap-2">
         <SidebarMenu>
           <SidebarMenuItem>

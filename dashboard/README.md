@@ -48,7 +48,7 @@ It is a Next.js 16 App Router app scaffolded with `npx shadcn@latest init --pres
   - the sidebar collapses on an ease-out curve.
 
   Pages fade in through `app/(console)/template.tsx`. `components/motion.tsx` has `FadeIn`, `Stagger`, `AnimatedNumber` and `Expand`. The sidebar's active item is a pill that glides between links, and theme switches reveal as a circle from the click (View Transitions). Everything honours `prefers-reduced-motion`.
-- **Shell.** An inset sidebar collapses to icons (Ctrl/⌘+B). It has a project switcher, Ctrl/⌘+K search across pages, agents and actions, breadcrumbs, a theme switch, and a footer with docs and the signed-in key.
+- **Shell.** A full-height sidebar collapses to icons (Ctrl/⌘+B). It has a project switcher, Ctrl/⌘+K search across pages, agents and actions, breadcrumbs, a theme switch, and a footer with docs and the signed-in key.
 
 ![Dark mode](docs/dashboard-dark.png)
 

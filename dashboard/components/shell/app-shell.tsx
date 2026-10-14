@@ -8,7 +8,7 @@ import { CommandMenu } from "./command-menu"
 import { SiteHeader } from "./site-header"
 import { ProjectProvider, type ProjectInfo } from "./project-context"
 
-/** Signed-in console chrome: inset sidebar, sticky header, command menu. */
+/** Signed-in console chrome: sidebar, sticky header, command menu. */
 export function AppShell({
   project,
   defaultOpen,
@@ -30,7 +30,7 @@ export function AppShell({
         </a>
         <SidebarProvider defaultOpen={defaultOpen}>
           <AppSidebar onSearch={() => setSearchOpen(true)} />
-          <SidebarInset className="min-w-0 md:peer-data-[variant=inset]:shadow-card md:peer-data-[variant=inset]:ring-1 md:peer-data-[variant=inset]:ring-sidebar-border">
+          <SidebarInset className="min-w-0">
             <SiteHeader />
             <div id="main" tabIndex={-1} className="flex flex-1 flex-col outline-none">
               {children}

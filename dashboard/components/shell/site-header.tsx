@@ -42,7 +42,7 @@ export function SiteHeader() {
   const pathname = usePathname()
   const crumbs = crumbsFor(pathname)
   return (
-    <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur-md supports-backdrop-filter:bg-background/65 md:rounded-t-xl">
+    <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur-md supports-backdrop-filter:bg-background/65">
       <SidebarTrigger className="-ml-0.5" />
       <Separator orientation="vertical" className="mr-1 data-vertical:h-4 data-vertical:self-center" />
       <Breadcrumb className="min-w-0 flex-1">
