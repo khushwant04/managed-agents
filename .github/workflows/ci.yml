@@ -102,6 +102,14 @@ jobs:
           tags: agents-base:ci
           cache-from: type=gha,scope=sandbox
           cache-to: type=gha,mode=max,scope=sandbox
+      - name: Dashboard image
+        uses: docker/build-push-action@v6
+        with:
+          context: dashboard
+          push: false
+          tags: managed-agents-dashboard:ci
+          cache-from: type=gha,scope=dashboard
+          cache-to: type=gha,mode=max,scope=dashboard
       - name: Compose file is valid
         run: docker compose config --quiet
 
@@ -125,3 +133,62 @@ jobs:
             helm template ci . -f "$f" > /dev/null
             echo "::endgroup::"
           done
+
+  openapi:
+    name: OpenAPI spec is current
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version: "3.12"
+      - run: uv sync --locked
+      - name: Regenerate and diff
+        run: |
+          uv run agents-server openapi > /tmp/openapi.json
+          diff -u docs/api/openapi.json /tmp/openapi.json || { echo "::error::docs/api/openapi.json is stale; run make openapi"; exit 1; }
+
+  typescript:
+    name: TypeScript SDK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: typescript
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: typescript/package-lock.json
+      - run: npm ci
+      - name: Generated types match the spec
+        run: npm run check:generated --workspace @managed-agents/client
+      - run: npm run build
+      - run: npx tsc --noEmit
+      - run: npm test
+
+  dashboard:
+    name: Dashboard
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm ci
+      - name: Generated types match the spec
+        run: |
+          npm run generate
+          git diff --exit-code -- lib/api-types.ts || { echo "::error::dashboard/lib/api-types.ts is stale; run npm run generate"; exit 1; }
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run build
