@@ -42,6 +42,10 @@ x-agents-env: &agents-env
   AGENTS_RATE_LIMIT_PER_MINUTE: ${AGENTS_RATE_LIMIT_PER_MINUTE:-600}
   # Provider keys, passed through from your shell or .env (empty if unset).
   E2B_API_KEY: ${E2B_API_KEY:-}
+  # A self-hosted E2B runtime (E2B Embed, https://github.com/e2b-dev/runtime);
+  # empty means E2B Cloud. On Embed: http://<host>:3000 and http://<host>:3002.
+  E2B_API_URL: ${E2B_API_URL:-}
+  E2B_SANDBOX_URL: ${E2B_SANDBOX_URL:-}
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
   OPENAI_API_KEY: ${OPENAI_API_KEY:-}
 

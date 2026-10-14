@@ -1,0 +1,114 @@
+name: E2B setup check (E2B Embed)
+
+# Boots a self-hosted E2B runtime (E2B Embed, https://github.com/e2b-dev/runtime)
+# on the runner, builds the agents-base template on it, and runs Embed's own
+# smoke test followed by `agents e2b check`: real Firecracker sandboxes driven
+# through this repo's E2B provider and built-in tools.
+#
+# Embed needs Linux with KVM, the nbd module and spare RAM for hugepages. E2B's
+# own CI runs it on a self-hosted runner; set the repository variable
+# E2B_EMBED_RUNNER to such a runner's label (for example `self-hosted`) for a
+# reliable run. On `ubuntu-latest` the job enables /dev/kvm and loads nbd, which
+# may or may not be available on GitHub's hosted kernels.
+
+on:
+  workflow_dispatch:
+    inputs:
+      embed_ref:
+        description: e2b-dev/runtime commit to take embed/compose from
+        default: 50fc41af77ff0877d4224e5e4ded5e7f308b5476
+  schedule:
+    - cron: "17 5 * * 1"
+  pull_request:
+    paths:
+      - infra/e2b/**
+      - packages/agents/src/agents/sandbox/e2b*.py
+      - .github/workflows/e2b-embed.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2b-embed-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  UV_VERSION: "0.11.32"
+  EMBED_REF: ${{ inputs.embed_ref || '50fc41af77ff0877d4224e5e4ded5e7f308b5476' }}
+  EMBED_DIR: ${{ github.workspace }}/.e2b-embed
+
+jobs:
+  embed:
+    name: E2B Embed + agents e2b check
+    runs-on: ${{ vars.E2B_EMBED_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare the host (KVM, nbd, disk)
+        run: |
+          set -euo pipefail
+          if [ -e /dev/kvm ]; then
+            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+            sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+          else
+            echo "::warning::/dev/kvm is missing on this runner; Embed's preflight will stop. Set E2B_EMBED_RUNNER to a KVM runner."
+          fi
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq iptables rsync e2fsprogs iproute2 "linux-modules-extra-$(uname -r)" || true
+          sudo modprobe nbd nbds_max=64 || echo "::warning::could not load the nbd module"
+          # Hosted runners ship toolchains we don't need; Embed wants room for templates and snapshots.
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+          df -h / && free -g && nproc
+
+      - name: Start E2B Embed
+        run: |
+          set -euo pipefail
+          mkdir -p "$EMBED_DIR" && cd "$EMBED_DIR"
+          curl -fsSL --remote-name-all "https://raw.githubusercontent.com/e2b-dev/runtime/${EMBED_REF}/embed/compose/{compose.yaml,.env}"
+          # Smaller than Embed's defaults so a 16 GiB runner fits: 2 GiB of hugepages, 10 GiB disk floor.
+          printf 'HUGEPAGES=1024\nPF_MIN_FREE_GIB=10\n' >> .env
+          docker compose up -d --wait --wait-timeout 1500
+          docker compose exec -T ready cat /run/e2b/sdk.env | sed 's/^export //' >> "$GITHUB_ENV"
+
+      - name: Embed's own smoke test (the baseline)
+        working-directory: ${{ env.EMBED_DIR }}
+        run: docker compose --profile test run --rm smoke
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version: "3.12"
+
+      - name: Install
+        run: uv sync --locked
+
+      - name: Build the agents-base template on Embed
+        env:
+          E2B_TEMPLATE_MEMORY_MB: "1024"
+        run: uv run --no-project --with 'e2b>=2' python infra/e2b/build_template.py
+
+      - name: agents e2b check
+        run: uv run agents e2b check --egress
+
+      - name: Live E2B test
+        env:
+          E2B_CHECK_EGRESS: "1"
+        run: uv run pytest -q -m live packages/agents/tests/test_e2b_check.py
+
+      - name: Embed logs on failure
+        if: failure()
+        working-directory: ${{ env.EMBED_DIR }}
+        run: |
+          docker compose ps -a || true
+          for s in preflight host-setup fetch-artifacts base-template api orchestrator client-proxy; do
+            echo "::group::$s"; docker compose logs --no-color --tail 200 "$s" || true; echo "::endgroup::"
+          done
+
+      - name: Tear down
+        if: always()
+        working-directory: ${{ env.EMBED_DIR }}
+        run: |
+          docker compose down -v || true
+          docker compose --profile purge run --rm host-teardown || true

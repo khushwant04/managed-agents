@@ -11,6 +11,12 @@ data:
   AGENTS_PUBLIC_URL: {{ . | quote }}
   {{- end }}
   AGENTS_SANDBOX_PROVIDER: {{ .Values.config.sandboxProvider | quote }}
+  {{- with .Values.config.e2b.apiUrl }}
+  E2B_API_URL: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.config.e2b.sandboxUrl }}
+  E2B_SANDBOX_URL: {{ . | quote }}
+  {{- end }}
   AGENTS_WORKER_CONCURRENCY: {{ .Values.config.workerConcurrency | quote }}
   AGENTS_LEASE_SECONDS: {{ .Values.config.leaseSeconds | quote }}
   AGENTS_IDLE_PAUSE_SECONDS: {{ .Values.config.idlePauseSeconds | quote }}

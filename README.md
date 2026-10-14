@@ -13,7 +13,7 @@ An open-source, self-hosted managed-agents platform. Register an agent once, and
 - **Host:** deployments expose agents through HTTP, signed webhooks (GitHub, Slack, Stripe, generic), cron and queue triggers. Sessions stream events over resumable SSE or WebSocket.
 - **Run durably:** the project's own agent loop handles tool calling, parallel tools, steering, interrupts, approvals, subagents, compaction and budgets. Every model and tool call is a checkpointed step, so if a worker dies mid-run, another resumes the session without repeating completed work.
 - **Use native model features:** thin adapters for the Anthropic Messages API (adaptive thinking, prompt caching, server tools, refusal fallback), the OpenAI Responses API (reasoning effort, encrypted reasoning, native shell) and any OpenAI-compatible endpoint. A session can switch vendors between runs.
-- **Sandbox:** each session gets an [E2B](https://e2b.dev) sandbox for shell, files and code. Docker or a local directory can be used for development.
+- **Sandbox:** each session gets an [E2B](https://e2b.dev) sandbox for shell, files and code, on E2B Cloud or a self-hosted [E2B Embed](https://github.com/e2b-dev/runtime) install; `agents e2b check` verifies either end to end. Docker or a local directory can be used for development.
 - **Operate:** encrypted secrets that never reach the model or the sandbox; API keys with roles; per-project allowlists and token budgets; an audit log; Prometheus metrics, OpenTelemetry traces and a Grafana dashboard.
 
 Claude Managed Agents and OpenAI's Agents API are reference designs, not dependencies: the project only calls model inference APIs.

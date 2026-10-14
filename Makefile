@@ -8,7 +8,7 @@ SANDBOX_IMAGE ?= agents-base:latest
 HELM_CHART    ?= deploy/helm/managed-agents
 
 .DEFAULT_GOAL := help
-.PHONY: help install lint test test-live dev dev-docker down logs image sandbox-image openapi helm-lint e2b-template
+.PHONY: help install lint test test-live dev dev-docker down logs image sandbox-image openapi helm-lint e2b-template e2b-check e2b-embed-up e2b-embed-env e2b-embed-down
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -44,8 +44,26 @@ image: ## Build the server image
 sandbox-image: ## Build the sandbox image (agents-base:latest) for the Docker provider
 	$(DOCKER) build -t $(SANDBOX_IMAGE) infra/e2b
 
-e2b-template: ## Build the agents-base E2B template (needs E2B_API_KEY)
+e2b-template: ## Build the agents-base E2B template (needs E2B_API_KEY; E2B_API_URL for self-hosted)
 	$(UV) run --no-project --with 'e2b>=2' python infra/e2b/build_template.py
+
+e2b-check: ## Check the E2B setup end to end (E2B Cloud, or E2B_API_URL/E2B_SANDBOX_URL for self-hosted)
+	$(UV) run agents e2b check $(E2B_CHECK_ARGS)
+
+# E2B Embed: the whole E2B runtime on this Linux host (needs KVM; see infra/e2b/README.md).
+E2B_EMBED_REF ?= 50fc41af77ff0877d4224e5e4ded5e7f308b5476
+E2B_EMBED_DIR ?= .e2b-embed
+
+e2b-embed-up: ## Start a self-hosted E2B (E2B Embed, pinned to E2B_EMBED_REF) on this KVM host
+	mkdir -p $(E2B_EMBED_DIR)
+	cd $(E2B_EMBED_DIR) && curl -fsSL --remote-name-all "https://raw.githubusercontent.com/e2b-dev/runtime/$(E2B_EMBED_REF)/embed/compose/{compose.yaml,.env}"
+	cd $(E2B_EMBED_DIR) && $(DOCKER) compose up -d --wait
+
+e2b-embed-env: ## Print E2B Embed's SDK exports: eval "$$(make -s e2b-embed-env)"
+	@cd $(E2B_EMBED_DIR) && $(DOCKER) compose exec -T ready cat /run/e2b/sdk.env
+
+e2b-embed-down: ## Stop E2B Embed (keeps its data; add V=1 to remove it)
+	cd $(E2B_EMBED_DIR) && $(DOCKER) compose down $(if $(V),-v,)
 
 openapi: ## Regenerate docs/api/openapi.json
 	$(UV) run agents-server openapi > docs/api/openapi.json.tmp && mv docs/api/openapi.json.tmp docs/api/openapi.json

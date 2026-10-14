@@ -42,6 +42,11 @@ config:
   publicUrl: ""
   # e2b (production) | docker | local. `docker` does not work in-cluster.
   sandboxProvider: e2b
+  # A self-hosted E2B runtime (E2B Embed or an E2B BYOC install); empty means
+  # E2B Cloud. Embed: apiUrl http://<node>:3000, sandboxUrl http://<node>:3002.
+  e2b:
+    apiUrl: ""
+    sandboxUrl: ""
   workerConcurrency: 8
   leaseSeconds: 30
   idlePauseSeconds: 300

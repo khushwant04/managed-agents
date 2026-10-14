@@ -14,10 +14,20 @@ class Sandbox:
         self.env = env or Environment(provider=provider.name)
 
     @classmethod
-    def e2b(cls, template: str = "agents-base", *, api_key: str | None = None, **env: object) -> Sandbox:
+    def e2b(
+        cls,
+        template: str = "agents-base",
+        *,
+        api_key: str | None = None,
+        api_url: str | None = None,
+        sandbox_url: str | None = None,
+        **env: object,
+    ) -> Sandbox:
+        """E2B Cloud by default; pass ``api_url``/``sandbox_url`` (or set ``E2B_API_URL``/``E2B_SANDBOX_URL``) for a self-hosted runtime."""
         from .e2b import E2BSandboxProvider
 
-        return cls(E2BSandboxProvider(api_key=api_key), Environment(provider="e2b", template=template, **env))  # type: ignore[arg-type]
+        provider = E2BSandboxProvider(api_key=api_key, api_url=api_url, sandbox_url=sandbox_url)
+        return cls(provider, Environment(provider="e2b", template=template, **env))  # type: ignore[arg-type]
 
     @classmethod
     def docker(cls, image: str = "agents-base:latest", **env: object) -> Sandbox:

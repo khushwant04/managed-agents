@@ -8,6 +8,7 @@
     agents rollback incident-investigator
     agents invoke incident-investigator@prod "Why did p99 latency jump?"
     agents sessions tail <session-id>
+    agents e2b check                                          # verify the E2B setup end to end
 
 The server and key come from ``--url``/``AGENTS_BASE_URL`` and ``AGENTS_API_KEY``.
 """
@@ -312,6 +313,25 @@ async def cmd_secrets(args: argparse.Namespace) -> int:
     return 0
 
 
+async def cmd_e2b_check(args: argparse.Namespace) -> int:
+    from dataclasses import asdict
+
+    from agents.sandbox.e2b_check import check_e2b
+
+    report = await check_e2b(
+        template=args.template,
+        api_url=args.api_url,
+        sandbox_url=args.sandbox_url,
+        egress=args.egress,
+        pause=not args.no_pause,
+    )
+    if args.json:
+        print_json({"ok": report.ok, "api_url": report.api_url, "template": report.template, "steps": [asdict(s) for s in report.steps]})
+    else:
+        print(report.render())
+    return 0 if report.ok else 1
+
+
 async def cmd_versions(args: argparse.Namespace) -> int:
     async with client(args) as c:
         versions = await c.agents.versions(args.agent)
@@ -424,6 +444,20 @@ def build_parser() -> argparse.ArgumentParser:
     for verb in ("pause", "resume", "delete"):
         des.add_parser(verb).add_argument("name")
     de.set_defaults(fn=cmd_deployments)
+
+    e2b = sub.add_parser("e2b", help="E2B sandbox tooling")
+    e2bs = e2b.add_subparsers(dest="action", required=True)
+    chk = e2bs.add_parser(
+        "check",
+        help="check an E2B setup end to end (E2B Cloud, or a self-hosted runtime such as E2B Embed)",
+        description="Uses E2B_API_KEY, and E2B_API_URL / E2B_SANDBOX_URL for a self-hosted runtime.",
+    )
+    chk.add_argument("--template", default="agents-base")
+    chk.add_argument("--api-url", help="self-hosted API, e.g. http://host:3000 (default $E2B_API_URL)")
+    chk.add_argument("--sandbox-url", help="self-hosted sandbox proxy, e.g. http://host:3002 (default $E2B_SANDBOX_URL)")
+    chk.add_argument("--egress", action="store_true", help="also check the egress allowlist")
+    chk.add_argument("--no-pause", action="store_true", help="skip the pause and resume check")
+    e2b.set_defaults(fn=cmd_e2b_check)
 
     se = sub.add_parser("secrets", help="manage encrypted secrets")
     ses = se.add_subparsers(dest="action", required=True)

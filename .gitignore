@@ -9,3 +9,6 @@ htmlcov/
 dist/
 node_modules/
 .env
+
+# Local E2B Embed install (make e2b-embed-up)
+.e2b-embed/

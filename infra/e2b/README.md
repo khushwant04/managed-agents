@@ -75,6 +75,51 @@ E2B's docs now direct users to migrate (`e2b template migrate`, which generates
 which is what `build_template.py` does. The CLI writes `template_id` back into
 `e2b.toml` after the first build. Prefer the SDK path above.
 
+## Self-hosted: E2B Embed
+
+[E2B Embed](https://github.com/e2b-dev/runtime/tree/main/embed) runs the whole E2B runtime
+(API, Firecracker orchestrator, sandbox proxy, template builder, dashboard) on one Linux host
+with KVM, with the same SDK and API as E2B Cloud. The platform needs no code change to use it,
+only two more variables next to `E2B_API_KEY`:
+
+```bash
+make e2b-embed-up                         # downloads embed/compose pinned to E2B_EMBED_REF, docker compose up
+eval "$(make -s e2b-embed-env)"           # E2B_API_KEY, E2B_API_URL (:3000), E2B_SANDBOX_URL (:3002)
+make e2b-template                         # build agents-base on your install
+make e2b-check                            # verify it end to end (below)
+```
+
+For the platform's workers, set `E2B_API_URL` and `E2B_SANDBOX_URL` in `.env` (Compose) or
+`config.e2b.apiUrl` / `config.e2b.sandboxUrl` (Helm). Embed's own requirements, ports and
+troubleshooting are in its [compose guide](https://github.com/e2b-dev/runtime/blob/main/embed/compose/README.md).
+Embed serves plain HTTP, so keep it inside your network.
+
+## Checking a setup
+
+`agents e2b check` (or `make e2b-check`) verifies that agents will run on an E2B setup, E2B Cloud
+or self-hosted. It goes through the platform's own E2B provider and built-in tools, not just the SDK:
+
+| Check | What it proves |
+| --- | --- |
+| configuration | `E2B_API_KEY` is set, and `E2B_SANDBOX_URL` accompanies `E2B_API_URL` |
+| api reachable | the API answers and accepts the key (`GET /v2/templates`) |
+| template ready | `agents-base` (or `--template`) exists and its build is ready |
+| create sandbox | a sandbox starts from it, with the `/workspace` layout created |
+| workspace layout | `/workspace/{inputs,outputs,skills,memory}` exist and are writable by the sandbox user |
+| toolchain | bash, python3, node and git are present (warnings on a stock template) |
+| commands | exit codes, stderr and timeouts come back correctly |
+| files | binary files round-trip byte for byte |
+| built-in tools | the `shell`, `files` and `code` tools work in the sandbox |
+| pause and resume | `/workspace` survives a pause (skip with `--no-pause`) |
+| egress allowlist | with `--egress`: an allowed host is reachable and others are blocked |
+
+Failures print a `FIX:` line. `--json` prints a machine-readable report.
+
+The [`e2b-embed` workflow](../../.github/workflows/e2b-embed.yml) runs all of this in CI: it starts
+Embed on the runner, runs Embed's own smoke test as a baseline, builds `agents-base`, then runs
+`agents e2b check --egress` and the live E2B test. Embed needs KVM, so point the repository
+variable `E2B_EMBED_RUNNER` at a self-hosted KVM runner, as E2B's own CI does.
+
 ## Using a different template
 
 Sandbox environments choose a template by name (`Environment.template`,

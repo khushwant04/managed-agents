@@ -1383,6 +1383,7 @@ source = { virtual = "." }
 
 [package.dev-dependencies]
 dev = [
+    { name = "e2b" },
     { name = "managed-agents" },
     { name = "managed-agents-cli" },
     { name = "managed-agents-server" },
@@ -1398,6 +1399,7 @@ dev = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "e2b", specifier = ">=2.0" },
     { name = "managed-agents", editable = "packages/agents" },
     { name = "managed-agents-cli", editable = "packages/agents-cli" },
     { name = "managed-agents-server", editable = "packages/agents-server" },

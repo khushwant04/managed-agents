@@ -42,6 +42,7 @@ Decision record: [ADR-0006](../adr/0006-e2b-sandbox-per-session.md).
 - Because the harness is ours, workers drive the sandbox through E2B's command and file APIs; nothing agent-specific runs inside it.
 - Skills are copied to `/workspace/skills`, inputs to `/workspace/inputs`; `/workspace/outputs` syncs to object storage on `artifact.created` and at idle.
 - Idle sessions pause the sandbox where the E2B plan supports it, otherwise snapshot `/workspace` and restore into a new sandbox on the next input.
+- E2B Cloud or self-hosted: the same provider works against a self-hosted E2B runtime such as [E2B Embed](https://github.com/e2b-dev/runtime) through `E2B_API_URL` and `E2B_SANDBOX_URL`. `agents e2b check` verifies a setup end to end, and the `e2b-embed` CI workflow runs that check against a real Embed install ([infra/e2b](../../infra/e2b/README.md#checking-a-setup)).
 
 ```text
 /workspace

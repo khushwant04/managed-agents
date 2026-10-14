@@ -25,6 +25,7 @@ dev = [
   "ruff>=0.6",
   "mypy>=1.11",
   "opentelemetry-sdk>=1.27",
+  "e2b>=2.0",
 ]
 
 [tool.pytest.ini_options]

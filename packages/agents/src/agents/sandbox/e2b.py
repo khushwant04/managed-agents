@@ -3,6 +3,11 @@
 Requires the ``e2b`` extra and ``E2B_API_KEY``. Sandboxes are created from the
 ``agents-base`` template (see ``infra/e2b``); idle sessions are paused and
 reconnected on the next input, which resumes them.
+
+Works with E2B Cloud and with a self-hosted E2B runtime such as E2B Embed
+(https://github.com/e2b-dev/runtime): point it at your install with
+``E2B_API_URL`` and ``E2B_SANDBOX_URL`` (or the ``api_url``/``sandbox_url``
+arguments). ``infra/e2b/check.py`` verifies a setup end to end.
 """
 
 from __future__ import annotations
@@ -23,17 +28,25 @@ from .base import (
 class E2BSandboxProvider:
     name = "e2b"
 
-    def __init__(self, api_key: str | None = None) -> None:
+    def __init__(
+        self,
+        api_key: str | None = None,
+        *,
+        api_url: str | None = None,
+        sandbox_url: str | None = None,
+        domain: str | None = None,
+    ) -> None:
         try:
             from e2b import AsyncSandbox
         except ImportError as exc:  # pragma: no cover
             raise ImportError("E2B sandboxes need the e2b extra: pip install 'managed-agents[e2b]'") from exc
         self._cls = AsyncSandbox
-        self._api_key = api_key
+        # Unset values fall back to the SDK's E2B_API_KEY, E2B_API_URL, E2B_SANDBOX_URL and E2B_DOMAIN.
+        self._conn = {k: v for k, v in {"api_key": api_key, "api_url": api_url, "sandbox_url": sandbox_url, "domain": domain}.items() if v}
         self._live: dict[str, Any] = {}
 
     def _opts(self) -> dict[str, Any]:
-        return {"api_key": self._api_key} if self._api_key else {}
+        return dict(self._conn)
 
     async def _sbx(self, h: SandboxHandle) -> Any:
         sbx = self._live.get(h.id)
@@ -56,8 +69,9 @@ class E2BSandboxProvider:
             kwargs["allow_internet_access"] = False
         sbx = await self._cls.create(**kwargs)
         self._live[sbx.sandbox_id] = sbx
+        # As root, so templates without a /workspace (such as E2B's stock `base`) work too.
         dirs = " ".join(f"{WORKSPACE}/{d}" for d in WORKSPACE_DIRS)
-        await sbx.commands.run(f"mkdir -p {dirs}", timeout=30)
+        await sbx.commands.run(f"mkdir -p {dirs} && chown -R user:user {WORKSPACE}", user="root", timeout=30)
         return SandboxHandle(id=sbx.sandbox_id, provider="e2b", data={"timeout_s": env.timeout_s})
 
     async def exec(self, h: SandboxHandle, cmd: str, timeout: float | None = None) -> ExecResult:
