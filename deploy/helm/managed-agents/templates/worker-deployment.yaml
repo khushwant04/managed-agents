@@ -1,0 +1,49 @@
+{{- $c := dict "root" . "component" "worker" -}}
+{{- $v := .Values.worker -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "managed-agents.componentName" $c }}
+  labels:
+    {{- include "managed-agents.componentLabels" $c | nindent 4 }}
+spec:
+  {{- if not .Values.keda.enabled }}
+  replicas: {{ $v.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "managed-agents.componentSelectorLabels" $c | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "managed-agents.componentLabels" $c | nindent 8 }}
+        {{- with $v.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        {{- include "managed-agents.podAnnotations" (dict "root" . "values" $v) | nindent 8 }}
+    spec:
+      {{- include "managed-agents.podCommon" (dict "root" . "values" $v) | nindent 6 }}
+      terminationGracePeriodSeconds: {{ $v.terminationGracePeriodSeconds }}
+      containers:
+        - name: worker
+          image: {{ include "managed-agents.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["worker"]
+          envFrom:
+            {{- include "managed-agents.envFrom" . | nindent 12 }}
+          env:
+            {{- include "managed-agents.secretEnv" . | nindent 12 }}
+            # Stable, readable worker ids in run leases.
+            - name: AGENTS_WORKER_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml $v.resources | nindent 12 }}
+          volumeMounts:
+            {{- include "managed-agents.volumeMounts" . | nindent 12 }}

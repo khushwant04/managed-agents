@@ -1,0 +1,26 @@
+apiVersion: v2
+name: managed-agents
+description: Self-hosted managed agents platform - gateway, runtime workers, scheduler.
+type: application
+version: 0.1.0
+# Default image tag (image.tag overrides). Release images are tagged with the
+# git tag minus the leading "v".
+appVersion: "0.1.0"
+home: https://github.com/khushwant04/managed-agents
+sources:
+  - https://github.com/khushwant04/managed-agents
+keywords:
+  - agents
+  - llm
+  - claude
+  - openai
+maintainers:
+  - name: Khushwant Sanwalot
+    url: https://github.com/khushwant04
+dependencies:
+  # Optional bundled Postgres for evaluation and small installs. For production
+  # use a managed Postgres via externalDatabase.url or secrets.existingSecret.
+  - name: postgresql
+    version: "18.x.x"
+    repository: oci://registry-1.docker.io/bitnamicharts
+    condition: postgresql.enabled

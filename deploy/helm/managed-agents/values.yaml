@@ -1,0 +1,269 @@
+# Default values for managed-agents.
+#
+# Minimum to install (external Postgres, S3 bucket):
+#
+#   helm install agents deploy/helm/managed-agents \
+#     --set externalDatabase.url='postgresql://user:pass@host:5432/agents' \
+#     --set config.blobUrl='s3://my-bucket/agents' \
+#     --set secrets.masterKey="$(python -c 'import os,base64;print(base64.b64encode(os.urandom(32)).decode())')" \
+#     --set secrets.anthropicApiKey=... --set secrets.e2bApiKey=...
+#
+# Or keep every credential in a Secret you manage: secrets.existingSecret.
+
+image:
+  repository: ghcr.io/khushwant04/managed-agents-server
+  # Defaults to the chart's appVersion.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  # Defaults to the release fullname when create is true, "default" otherwise.
+  name: ""
+  annotations: {}
+  # The platform does not call the Kubernetes API.
+  automountServiceAccountToken: false
+
+# -----------------------------------------------------------------------------
+# Non-secret settings (rendered into a ConfigMap, loaded by every component)
+# -----------------------------------------------------------------------------
+config:
+  # Required. Shared object storage for artifacts, skill bundles and snapshots:
+  # s3://bucket/prefix (any S3-compatible service). A file:// path only works
+  # with a single pod and is rejected unless allowFileBlobs is true.
+  blobUrl: ""
+  allowFileBlobs: false
+  # Public base URL of the API (links in responses, webhooks). Defaults to the
+  # first ingress host when ingress is enabled.
+  publicUrl: ""
+  # e2b (production) | docker | local. `docker` does not work in-cluster.
+  sandboxProvider: e2b
+  workerConcurrency: 8
+  leaseSeconds: 30
+  idlePauseSeconds: 300
+  pollInterval: "1.0"
+  maxCallDepth: 3
+  rateLimitPerMinute: 600
+  aws:
+    # e.g. us-east-1. Leave empty to use the SDK's default resolution.
+    region: ""
+    # For non-AWS S3 (MinIO, R2, ...), e.g. http://minio.storage:9000
+    endpointUrl: ""
+  # Extra non-secret environment variables for every component.
+  extraEnv: {}
+
+# -----------------------------------------------------------------------------
+# Secrets
+# -----------------------------------------------------------------------------
+secrets:
+  # Name of an existing Secret to use instead of creating one. Expected keys
+  # (all optional except DATABASE_URL): DATABASE_URL, AGENTS_MASTER_KEY,
+  # ANTHROPIC_API_KEY, OPENAI_API_KEY, E2B_API_KEY, AWS_ACCESS_KEY_ID,
+  # AWS_SECRET_ACCESS_KEY, AGENTS_BOOTSTRAP_KEY.
+  # When set, every other value in this block and externalDatabase.url are ignored.
+  existingSecret: ""
+  # Base64-encoded 32-byte key for secret envelope encryption (required when
+  # the chart creates the Secret). Losing it makes stored secrets unreadable.
+  masterKey: ""
+  anthropicApiKey: ""
+  openaiApiKey: ""
+  e2bApiKey: ""
+  # Leave empty to use IRSA / workload identity via serviceAccount.annotations.
+  awsAccessKeyId: ""
+  awsSecretAccessKey: ""
+  # Optional: create org/project "default" with this admin API key when the
+  # gateway starts. Convenient for a first install; rotate it afterwards.
+  bootstrapKey: ""
+  # Additional KEY: value pairs added to the Secret and exposed as env vars.
+  extra: {}
+
+# Used when postgresql.enabled is false and secrets.existingSecret is empty.
+externalDatabase:
+  url: ""
+
+# Bundled Postgres (Bitnami chart). Evaluation only; prefer a managed database.
+# Requires `helm dependency build deploy/helm/managed-agents` first.
+postgresql:
+  enabled: false
+  auth:
+    username: agents
+    # Required when enabled (the chart builds DATABASE_URL from it).
+    password: ""
+    database: agents
+  primary:
+    persistence:
+      size: 10Gi
+
+# -----------------------------------------------------------------------------
+# Gateway: REST API, SSE/WebSocket streams, router, /metrics
+# -----------------------------------------------------------------------------
+gateway:
+  replicaCount: 2
+  port: 8080
+  service:
+    type: ClusterIP
+    port: 80
+    annotations: {}
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+  # Adds prometheus.io/* scrape annotations for /metrics.
+  metricsAnnotations: true
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /readyz
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  startupProbe:
+    httpGet:
+      path: /healthz
+      port: http
+    periodSeconds: 5
+    failureThreshold: 30
+  # Long-lived SSE connections: give them time to finish on rollout.
+  terminationGracePeriodSeconds: 60
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+
+# -----------------------------------------------------------------------------
+# Runtime workers
+# -----------------------------------------------------------------------------
+worker:
+  # Used only when keda.enabled is false.
+  replicaCount: 2
+  # Runs survive a worker being killed (lease expiry hands them to another
+  # worker), but a long grace period lets in-flight steps finish.
+  terminationGracePeriodSeconds: 120
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 2Gi
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+
+# Scale workers on queue depth with KEDA (https://keda.sh; install KEDA first).
+keda:
+  enabled: false
+  # Keep >= 1: the query counts queued runs only, so scaling to zero while a
+  # run executes would interrupt it (it resumes elsewhere, but later).
+  minReplicaCount: 1
+  maxReplicaCount: 20
+  pollingInterval: 15
+  cooldownPeriod: 300
+  query: "SELECT count(*) FROM runs WHERE status = 'queued'"
+  # Target queued runs per worker replica.
+  targetQueryValue: "5"
+  activationTargetQueryValue: "0"
+  # Passed through to ScaledObject.spec.advanced (e.g. HPA scale-down behavior).
+  advanced: {}
+
+# -----------------------------------------------------------------------------
+# Scheduler: cron triggers, retries, idle reaper, partitions (single replica)
+# -----------------------------------------------------------------------------
+scheduler:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# -----------------------------------------------------------------------------
+# Migrations: `agents-server migrate` as a Helm hook Job
+# (pre-install/pre-upgrade; post-install when the bundled Postgres is enabled,
+# since it does not exist yet before install). Services also migrate on start
+# under an advisory lock, so this Job is a fail-fast gate, not the only path.
+# -----------------------------------------------------------------------------
+migrations:
+  enabled: true
+  backoffLimit: 3
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 3600
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+# -----------------------------------------------------------------------------
+# Ingress
+# -----------------------------------------------------------------------------
+ingress:
+  enabled: false
+  className: nginx
+  # Adds ingress-nginx annotations for SSE/WebSocket streams: long read/send
+  # timeouts and no response buffering. Disable for other controllers and set
+  # their equivalents in `annotations`.
+  nginxStreaming: true
+  streamTimeoutSeconds: 3600
+  bodySize: 64m
+  annotations: {}
+  hosts:
+    - host: agents.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: agents-tls
+  #    hosts:
+  #      - agents.example.com
+
+# -----------------------------------------------------------------------------
+# Shared pod settings
+# -----------------------------------------------------------------------------
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# Extra env (list of EnvVar) and envFrom sources for every component.
+extraEnv: []
+extraEnvFrom: []

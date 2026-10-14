@@ -1,0 +1,26 @@
+{
+  "name": "managed-agents-typescript",
+  "private": true,
+  "description": "TypeScript SDK workspace for managed-agents (client + optional React hooks).",
+  "workspaces": [
+    "packages/client",
+    "packages/react"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "generate": "npm run generate --workspace @managed-agents/client",
+    "check:generated": "npm run check:generated --workspace @managed-agents/client",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "typecheck": "tsc --noEmit",
+    "test:integration": "npm run test:integration --workspace @managed-agents/client"
+  },
+  "overrides": {
+    "vite": "7.3.7"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

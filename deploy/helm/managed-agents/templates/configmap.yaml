@@ -1,0 +1,29 @@
+{{- include "managed-agents.validate" . -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "managed-agents.configMapName" . }}
+  labels:
+    {{- include "managed-agents.labels" . | nindent 4 }}
+data:
+  AGENTS_BLOB_URL: {{ .Values.config.blobUrl | quote }}
+  {{- with include "managed-agents.publicUrl" . }}
+  AGENTS_PUBLIC_URL: {{ . | quote }}
+  {{- end }}
+  AGENTS_SANDBOX_PROVIDER: {{ .Values.config.sandboxProvider | quote }}
+  AGENTS_WORKER_CONCURRENCY: {{ .Values.config.workerConcurrency | quote }}
+  AGENTS_LEASE_SECONDS: {{ .Values.config.leaseSeconds | quote }}
+  AGENTS_IDLE_PAUSE_SECONDS: {{ .Values.config.idlePauseSeconds | quote }}
+  AGENTS_POLL_INTERVAL: {{ .Values.config.pollInterval | quote }}
+  AGENTS_MAX_CALL_DEPTH: {{ .Values.config.maxCallDepth | quote }}
+  AGENTS_RATE_LIMIT_PER_MINUTE: {{ .Values.config.rateLimitPerMinute | quote }}
+  {{- with .Values.config.aws.region }}
+  AWS_DEFAULT_REGION: {{ . | quote }}
+  AWS_REGION: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.config.aws.endpointUrl }}
+  AWS_ENDPOINT_URL: {{ . | quote }}
+  {{- end }}
+  {{- range $k, $v := .Values.config.extraEnv }}
+  {{ $k }}: {{ $v | quote }}
+  {{- end }}

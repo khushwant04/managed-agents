@@ -1,0 +1,143 @@
+name: Release
+
+# On a version tag (v1.2.3):
+#   1. build sdists + wheels for the three workspace packages and publish them
+#      to PyPI with trusted publishing (no API token);
+#   2. build and push the server image to GHCR;
+#   3. build the `agents-base` E2B sandbox template.
+#
+# One-time setup:
+#   - PyPI: add a trusted publisher for each of managed-agents,
+#     managed-agents-server and managed-agents-cli (owner khushwant04, repo
+#     managed-agents, workflow release.yml, environment pypi).
+#   - GitHub: create the `pypi` environment (optionally with required reviewers).
+#   - E2B: set the E2B_API_KEY secret (Template SDK). E2B_ACCESS_TOKEN alone
+#     falls back to the legacy CLI build (unverified, see infra/e2b/README.md).
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish (PyPI, GHCR, E2B). Off = build only."
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  UV_VERSION: "0.11.32"
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/managed-agents-server
+  PUBLISH: ${{ github.event_name == 'push' || inputs.publish }}
+
+jobs:
+  python-build:
+    name: Build Python packages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.12"
+      - name: Check package versions match the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          status=0
+          for p in packages/agents packages/agents-server packages/agents-cli; do
+            v=$(python3 -c "import sys, tomllib; print(tomllib.load(open(sys.argv[1], 'rb'))['project']['version'])" "$p/pyproject.toml")
+            if [ "$v" != "$tag" ]; then
+              echo "::error file=$p/pyproject.toml::version $v does not match tag $GITHUB_REF_NAME"
+              status=1
+            fi
+          done
+          exit $status
+      - name: Build sdists and wheels
+        run: uv build --all-packages --out-dir dist
+      - run: ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/
+          if-no-files-found: error
+
+  pypi-publish:
+    name: Publish to PyPI
+    needs: python-build
+    if: needs.python-build.result == 'success' && (github.event_name == 'push' || inputs.publish)
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+
+  image:
+    name: Server image (GHCR)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        if: env.PUBLISH == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ env.PUBLISH == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=server-release
+          cache-to: type=gha,mode=max,scope=server-release
+
+  e2b-template:
+    name: E2B template (agents-base)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || inputs.publish
+    env:
+      E2B_API_KEY: ${{ secrets.E2B_API_KEY }}
+      E2B_ACCESS_TOKEN: ${{ secrets.E2B_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: "3.12"
+      - name: Build template
+        run: |
+          if [ -n "$E2B_API_KEY" ]; then
+            # Template SDK (verified API): parses infra/e2b/Dockerfile, builds on E2B.
+            uv run --no-project --with 'e2b>=2' python infra/e2b/build_template.py --name agents-base
+          elif [ -n "$E2B_ACCESS_TOKEN" ]; then
+            # Legacy CLI flow from infra/e2b/e2b.toml (unverified; see infra/e2b/README.md).
+            cd infra/e2b
+            npx --yes @e2b/cli template build
+          else
+            echo "::warning::Neither E2B_API_KEY nor E2B_ACCESS_TOKEN is set; skipping the E2B template build."
+          fi

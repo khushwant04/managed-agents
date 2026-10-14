@@ -1,0 +1,29 @@
+# Override: run sandboxes as local Docker containers instead of E2B.
+#
+#   make sandbox-image        # docker build -t agents-base:latest infra/e2b
+#   DOCKER_GID=$(stat -c %g /var/run/docker.sock) \
+#     docker compose -f docker-compose.yml -f deploy/compose/docker-sandbox.yml up --build
+#
+# (`make dev-docker` does both.) Paths below are relative to the repo root,
+# the directory of the first compose file.
+#
+# The worker gets the host's Docker socket, which is root-equivalent access to
+# the host: DEVELOPMENT ONLY. Sandbox containers are siblings on the host
+# daemon (labelled managed-agents=1), not children of the worker.
+#
+# DOCKER_GID must be the group owning the socket so the non-root worker user
+# can use it: usually the `docker` group on Linux; 0 on Docker Desktop.
+
+services:
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: with-docker-cli
+    image: ${AGENTS_DOCKER_WORKER_IMAGE:-managed-agents-server:dev-docker}
+    environment:
+      AGENTS_SANDBOX_PROVIDER: docker
+    group_add:
+      - "${DOCKER_GID:-0}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

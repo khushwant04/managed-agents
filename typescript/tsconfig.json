@@ -1,0 +1,13 @@
+{
+  "//": "Type-checks every package (sources and tests) in one pass: `npx tsc --noEmit`. Builds use each package's tsconfig.build.json.",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "types": ["node"],
+    "paths": {
+      "@managed-agents/client": ["./packages/client/src/index.ts"]
+    }
+  },
+  "include": ["packages/*/src", "packages/*/test", "packages/*/vitest.config.ts"]
+}

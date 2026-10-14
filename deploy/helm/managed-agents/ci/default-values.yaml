@@ -1,0 +1,7 @@
+# Values for `helm lint` / `helm template` in CI (chart-testing convention).
+externalDatabase:
+  url: postgresql://agents:agents@postgres.example.internal:5432/agents
+config:
+  blobUrl: s3://agents/
+secrets:
+  masterKey: ZGV2LW9ubHktbWFzdGVyLWtleS1OT1QtU0VDUkVUISE=

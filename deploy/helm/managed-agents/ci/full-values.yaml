@@ -1,0 +1,30 @@
+# Everything switched on: bundled Postgres, KEDA, ingress (render test only).
+postgresql:
+  enabled: true
+  auth:
+    password: "p@ss:w/rd"
+config:
+  blobUrl: s3://agents/prod
+  aws:
+    region: us-east-1
+    endpointUrl: http://minio.storage:9000
+secrets:
+  masterKey: ZGV2LW9ubHktbWFzdGVyLWtleS1OT1QtU0VDUkVUISE=
+  anthropicApiKey: sk-ant-test
+  e2bApiKey: e2b_test
+  bootstrapKey: ak_test_admin
+  extra:
+    MY_TOOL_TOKEN: abc
+keda:
+  enabled: true
+ingress:
+  enabled: true
+  hosts:
+    - host: agents.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: agents-tls
+      hosts:
+        - agents.example.com

@@ -1,0 +1,18 @@
+# Legacy E2B CLI config for the `agents-base` template.
+#
+# The current, verified build path is the Template SDK: `build_template.py`
+# (see README.md). This file only serves the legacy CLI flow
+# (`e2b template build`, authenticated with `e2b auth login` or E2B_ACCESS_TOKEN),
+# which E2B now asks you to migrate away from (`e2b template migrate`).
+#
+# UNVERIFIED: key names follow the legacy CLI's generated e2b.toml as of
+# CLI v1. After the first `e2b template build` the CLI writes `template_id`
+# (and `team_id`) back into this file; commit those so later builds update
+# the same template instead of creating a new one.
+
+template_name = "agents-base"
+dockerfile = "Dockerfile"
+cpu_count = 2
+memory_mb = 2048
+# template_id = "<filled in by the CLI after the first build>"
+# team_id = "<filled in by the CLI>"

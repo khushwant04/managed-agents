@@ -1,0 +1,80 @@
+name: Nightly live tests
+
+# Runs tests marked `live` against the real model APIs. Skipped (not failed)
+# when the provider secrets are not configured, e.g. on forks.
+
+on:
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  UV_VERSION: "0.11.32"
+  FORCE_COLOR: "1"
+
+jobs:
+  check:
+    name: Check secrets
+    runs-on: ubuntu-latest
+    outputs:
+      has-keys: ${{ steps.keys.outputs.has-keys }}
+    steps:
+      - id: keys
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -n "$ANTHROPIC_API_KEY" ] || [ -n "$OPENAI_API_KEY" ]; then
+            echo "has-keys=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-keys=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::ANTHROPIC_API_KEY / OPENAI_API_KEY secrets not set; skipping live tests."
+          fi
+
+  live:
+    name: Live tests
+    needs: check
+    if: needs.check.outputs.has-keys == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      E2B_API_KEY: ${{ secrets.E2B_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          python-version: "3.12"
+      - name: Install
+        run: uv sync --locked
+      - name: Pytest (live)
+        run: |
+          set +e
+          uv run pytest -q -m live
+          code=$?
+          if [ "$code" -eq 5 ]; then
+            echo "::notice::No tests marked 'live' were collected."
+            exit 0
+          fi
+          exit "$code"
