@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+
 from agents import Agent, tool
 from agents.adapters.base import ModelError
 from agents.events import new_id
@@ -398,3 +399,29 @@ async def test_call_agent_tool_delegates_to_local_agent():
     assert result.output == "final"
     assert adapter.requests[1].system == "You summarize."
     assert adapter.requests[2].messages[-1].content[0].content == "helper output"
+
+
+async def test_mcp_tools_inherit_the_server_ref_approval_policy():
+    from agents.types import ToolSpec
+
+    agent = Agent("ops", "scripted", tools=[{"mcp": "https://obs.example.com/mcp", "approval": "always"}])
+    spec = agent.spec()
+    mcp_tool = ToolSpec(name="obs__restart", description="", options={"mcp_server": "obs", "mcp_tool": "restart"})
+    calls_made = []
+
+    async def handler(args, ctx):
+        calls_made.append(args)
+        return "restarted"
+
+    tools = tool_specs(spec, [mcp_tool])
+    ctx = RunContext(
+        session_id="ses_m",
+        run_id="run_m",
+        spec=spec,
+        executor=ToolExecutor({t.name: t for t in tools}, handlers={"obs__restart": handler}),
+        tools=tools,
+        inputs=[Message.user("restart it")],
+    )
+    adapter = ScriptedAdapter([call("obs__restart", {}, id="r1")])
+    result = await Runner(scripted_registry(adapter), InMemoryStepStore(), InMemoryEventLog()).run(ctx)
+    assert result.stop_reason == "approval_pending" and calls_made == []

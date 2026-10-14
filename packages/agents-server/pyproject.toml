@@ -13,7 +13,11 @@ dependencies = [
   "croniter>=3.0",
   "prometheus-client>=0.20",
   "opentelemetry-api>=1.27",
+  "httpx>=0.27",
 ]
+
+[project.optional-dependencies]
+s3 = ["boto3>=1.34"]
 
 [project.scripts]
 agents-server = "agents_server.__main__:main"

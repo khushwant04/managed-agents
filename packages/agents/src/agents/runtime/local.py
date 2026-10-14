@@ -8,21 +8,27 @@ subagents) with in-memory stores.
 from __future__ import annotations
 
 import asyncio
+import os
+import secrets as _secrets
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
+
+import httpx
 
 from ..adapters import AdapterRegistry
 from ..events import Event, SessionStatus, new_id
 from ..sandbox import Sandbox
 from ..sandbox.base import FileSpec, SandboxHandle
 from ..skills import Skill
-from ..spec import AgentSpec
+from ..spec import AgentSpec, ToolRef
 from ..store.base import EventLog, StepSpec, StepStore
 from ..store.memory import InMemoryEventLog, InMemoryStepStore
 from ..tools.executor import CallContext, ToolExecutionError, ToolExecutor, ToolHandler
 from ..tools.function import FunctionTool
-from ..types import Message
+from ..tools.mcp import McpClient, mcp_tool_specs
+from ..tools.webhook import WebhookCaller
+from ..types import Message, ToolSpec
 from .runner import RunContext, Runner, RunResult, SteeringQueue
 from .toolset import needs_sandbox, system_prompt, tool_specs
 
@@ -56,6 +62,10 @@ class _SessionState:
     last_result: RunResult | None = None
     status: SessionStatus = "queued"
     subagent_slots: asyncio.Semaphore | None = None
+    secrets: dict[str, str] = field(default_factory=dict)
+    mcp: dict[str, McpClient] = field(default_factory=dict)
+    mcp_tools: list[ToolSpec] = field(default_factory=list)
+    owned_mcp: list[McpClient] = field(default_factory=list)
 
 
 class LocalRuntime:
@@ -64,12 +74,21 @@ class LocalRuntime:
         adapters: AdapterRegistry | None = None,
         steps: StepStore | None = None,
         events: EventLog | None = None,
+        *,
+        secrets: dict[str, str] | None = None,
+        webhook_secret: str | None = None,
+        http_client: httpx.AsyncClient | None = None,
     ) -> None:
         self.adapters = adapters or AdapterRegistry()
         self.steps = steps or InMemoryStepStore()
         self.events = events or InMemoryEventLog()
         self.runner = Runner(self.adapters, self.steps, self.events)
         self.sessions: dict[str, _SessionState] = {}
+        self.secrets = dict(secrets or {})
+        self.http_client = http_client
+        self.webhooks = WebhookCaller(
+            webhook_secret or os.environ.get("AGENTS_WEBHOOK_SECRET") or _secrets.token_hex(32), client=http_client
+        )
 
     # -- lifecycle --------------------------------------------------------
 
@@ -83,7 +102,9 @@ class LocalRuntime:
         agents: dict[str, Agent] | None = None,
         depth: int = 0,
         handle: SandboxHandle | None = None,
+        mcp: dict[str, McpClient] | None = None,
     ) -> str:
+        """Create a session. ``mcp`` shares already-connected MCP clients (subagents)."""
         state = _SessionState(
             id=new_id("ses"),
             spec=spec,
@@ -94,6 +115,10 @@ class LocalRuntime:
             agents=agents or {},
             handle=handle,
         )
+        state.secrets = self._resolve_secrets(spec, state.functions)
+        if mcp is not None:
+            state.mcp = {k: v for k, v in mcp.items() if spec.tool(k)}
+        await self._connect_mcp(state)
         if spec.subagents is not None:
             state.subagent_slots = asyncio.Semaphore(spec.subagents.max_concurrent)
         self.sessions[state.id] = state
@@ -107,6 +132,63 @@ class LocalRuntime:
         await self._status(state, "queued")
         return state.id
 
+    def _resolve_secrets(self, spec: AgentSpec, functions: dict[str, FunctionTool]) -> dict[str, str]:
+        """Secret values for tools reached through the gateway: runtime ``secrets``, then env vars."""
+        out: dict[str, str] = {}
+        for ref in spec.tools:
+            if not (ref.type == "mcp" or self._is_webhook(ref, functions)):
+                continue
+            for name in ref.secrets:
+                value = self.secrets.get(name, os.environ.get(name))
+                if value is None:
+                    raise ValueError(
+                        f"secret {name!r} used by tool {ref.name!r} is not set; set the environment "
+                        f"variable {name} or pass LocalRuntime(secrets={{{name!r}: ...}})"
+                    )
+                out[name] = value
+        return out
+
+    @staticmethod
+    def _is_webhook(ref: ToolRef, functions: dict[str, FunctionTool]) -> bool:
+        fn = functions.get(ref.name)
+        return ref.type == "function" and bool(ref.url) and (fn is None or fn.fn is None)
+
+    @staticmethod
+    def _secret_headers(ref: ToolRef, values: dict[str, str]) -> dict[str, str]:
+        if len(ref.secrets) == 1:
+            return {"Authorization": f"Bearer {values[ref.secrets[0]]}"}
+        return {f"X-Agents-Secret-{name}": values[name] for name in ref.secrets}
+
+    async def _connect_mcp(self, state: _SessionState) -> None:
+        """Connect to each MCP server and list its tools (ADR-0009)."""
+        try:
+            for ref in state.spec.tools:
+                if ref.type != "mcp":
+                    continue
+                client = state.mcp.get(ref.name)
+                if client is None:
+                    if not ref.url:
+                        raise ValueError(f"MCP tool {ref.name!r} has no url")
+                    headers = {**ref.options.get("headers", {}), **self._secret_headers(ref, state.secrets)}
+                    client = McpClient(
+                        ref.url, headers=headers, timeout=ref.options.get("timeout", 60), client=self.http_client
+                    )
+                    state.mcp[ref.name] = client
+                    state.owned_mcp.append(client)
+                    await client.connect()
+                state.mcp_tools.extend(mcp_tool_specs(ref.name, await client.list_tools()))
+        except BaseException:
+            await self._close_mcp(state)
+            raise
+
+    async def _close_mcp(self, state: _SessionState) -> None:
+        clients, state.owned_mcp = state.owned_mcp, []
+        for client in clients:
+            try:
+                await client.aclose()
+            except Exception:
+                pass
+
     async def _status(self, state: _SessionState, status: SessionStatus, **extra: Any) -> None:
         state.status = status
         await self.events.append(
@@ -114,13 +196,18 @@ class LocalRuntime:
         )
 
     def _executor(self, state: _SessionState) -> ToolExecutor:
-        specs = {t.name: t for t in tool_specs(state.spec)}
+        specs = {t.name: t for t in tool_specs(state.spec, mcp_tools=state.mcp_tools)}
         handlers: dict[str, ToolHandler] = {}
         if state.spec.subagents is not None:
             handlers["spawn_subagent"] = lambda args, ctx: self._spawn_subagent(state, args, ctx)
         for ref in state.spec.tools:
             if ref.type == "agent":
                 handlers[ref.name] = lambda args, ctx, ref=ref: self._call_agent(state, ref.options.get("agent", ref.name), args, ctx)
+            elif self._is_webhook(ref, state.functions):
+                handlers[ref.name] = lambda args, ctx, ref=ref: self._call_webhook(state, ref, args, ctx)
+        for t in state.mcp_tools:
+            client = state.mcp[t.options["mcp_server"]]
+            handlers[t.name] = lambda args, ctx, c=client, n=t.options["mcp_tool"]: c.call_tool(n, args)
         return ToolExecutor(
             specs,
             sandbox=state.sandbox.provider if state.sandbox else None,
@@ -151,7 +238,7 @@ class LocalRuntime:
             run_id=state.run_id,
             spec=state.spec,
             executor=self._executor(state),
-            tools=tool_specs(state.spec),
+            tools=tool_specs(state.spec, mcp_tools=state.mcp_tools),
             inputs=inputs,
             system=system_prompt(state.spec, has_sandbox=state.handle is not None),
             steering=state.steering,
@@ -232,6 +319,7 @@ class LocalRuntime:
         await self.interrupt(session_id)
         if state.sandbox and state.handle and state.depth == 0:
             await state.sandbox.provider.destroy(state.handle)
+        await self._close_mcp(state)
         await self._status(state, "terminated")
         close = getattr(self.events, "close", None)
         if close is not None:
@@ -254,6 +342,19 @@ class LocalRuntime:
 
     # -- delegation -------------------------------------------------------
 
+    async def _call_webhook(self, state: _SessionState, ref: ToolRef, args: dict[str, Any], ctx: CallContext) -> str:
+        assert ref.url is not None
+        return await self.webhooks.call(
+            ref.url,
+            tool=ref.name,
+            arguments=args,
+            idempotency_key=ctx.idempotency_key,
+            session_id=ctx.session_id,
+            run_id=ctx.run_id,
+            call_id=ctx.call_id,
+            headers=self._secret_headers(ref, state.secrets) if ref.secrets else None,
+        )
+
     async def _spawn_subagent(self, parent: _SessionState, args: dict[str, Any], ctx: CallContext) -> str:
         policy = parent.spec.subagents
         assert policy is not None and parent.subagent_slots is not None
@@ -275,6 +376,7 @@ class LocalRuntime:
                 handle=parent.handle,
                 depth=parent.depth + 1,
                 agents=parent.agents,
+                mcp=parent.mcp,
             )
             await self.events.append(
                 Event(session_id=parent.id, run_id=ctx.run_id, type="subagent.started", payload={"child_session_id": child_id, "task": args["task"]})

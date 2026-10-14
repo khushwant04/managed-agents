@@ -12,6 +12,7 @@ from pathlib import Path
 import anthropic
 import httpx2 as httpx
 import pytest
+
 from agents.adapters.anthropic import AnthropicAdapter
 from agents.adapters.base import ModelError
 from agents.testing import FakeAnthropicClient, load_fixture

@@ -3,9 +3,10 @@ from __future__ import annotations
 import textwrap
 
 import pytest
+from pydantic import BaseModel
+
 from agents import Agent, Sandbox, Skill, tool
 from agents.testing import ScriptedAdapter, call, scripted_registry, text
-from pydantic import BaseModel
 
 
 class DeployQuery(BaseModel):

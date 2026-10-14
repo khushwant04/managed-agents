@@ -10,6 +10,16 @@ import httpx2
 import openai
 import pydantic
 import pytest
+from openai.types.chat import (
+    ChatCompletionAssistantMessageParam,
+    ChatCompletionChunk,
+    ChatCompletionFunctionToolParam,
+    ChatCompletionSystemMessageParam,
+    ChatCompletionToolMessageParam,
+    ChatCompletionUserMessageParam,
+)
+from openai.types.chat.completion_create_params import CompletionCreateParamsStreaming
+
 from agents.adapters.base import ModelError
 from agents.adapters.openai_compatible import OpenAICompatibleAdapter
 from agents.tools.builtins import (
@@ -32,15 +42,6 @@ from agents.types import (
     ToolSpec,
     VendorBlock,
 )
-from openai.types.chat import (
-    ChatCompletionAssistantMessageParam,
-    ChatCompletionChunk,
-    ChatCompletionFunctionToolParam,
-    ChatCompletionSystemMessageParam,
-    ChatCompletionToolMessageParam,
-    ChatCompletionUserMessageParam,
-)
-from openai.types.chat.completion_create_params import CompletionCreateParamsStreaming
 
 FIXTURES = Path(__file__).parent / "fixtures" / "openai_compatible"
 MODEL = "qwen3-coder:30b"

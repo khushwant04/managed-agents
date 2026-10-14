@@ -326,6 +326,11 @@ class Runner:
         pending: list[dict[str, Any]] = []
         for call in calls:
             ref = ctx.spec.tool(call.name)
+            if ref is None:
+                # MCP tools are presented as <server>__<tool>; the policy is on the server ref.
+                tool = next((t for t in ctx.tools if t.name == call.name), None)
+                server = tool.options.get("mcp_server") if tool else None
+                ref = ctx.spec.tool(server) if server else None
             policy = parse_approval(ref.approval if ref else "never")
             try:
                 needed = policy.requires_approval(call.name, call.arguments)

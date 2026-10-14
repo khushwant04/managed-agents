@@ -10,6 +10,22 @@ import httpx2
 import openai
 import pydantic
 import pytest
+from openai.types.responses import (
+    EasyInputMessageParam,
+    FunctionShellToolParam,
+    FunctionToolParam,
+    ResponseFunctionToolCallParam,
+    ResponseReasoningItemParam,
+    ResponseStreamEvent,
+    WebSearchToolParam,
+)
+from openai.types.responses.response_create_params import ResponseCreateParamsStreaming
+from openai.types.responses.response_input_item_param import (
+    FunctionCallOutput,
+    ShellCall,
+    ShellCallOutput,
+)
+
 from agents.adapters.anthropic import AnthropicAdapter
 from agents.adapters.base import ModelError
 from agents.adapters.openai import SHELL_CALL, OpenAIAdapter
@@ -33,21 +49,6 @@ from agents.types import (
     ToolResultBlock,
     ToolSpec,
     VendorBlock,
-)
-from openai.types.responses import (
-    EasyInputMessageParam,
-    FunctionShellToolParam,
-    FunctionToolParam,
-    ResponseFunctionToolCallParam,
-    ResponseReasoningItemParam,
-    ResponseStreamEvent,
-    WebSearchToolParam,
-)
-from openai.types.responses.response_create_params import ResponseCreateParamsStreaming
-from openai.types.responses.response_input_item_param import (
-    FunctionCallOutput,
-    ShellCall,
-    ShellCallOutput,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures" / "openai"
