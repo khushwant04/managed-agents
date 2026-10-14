@@ -1,26 +1,42 @@
-import type { Metadata, Viewport } from "next";
-import type { ReactNode } from "react";
-import "./globals.css";
+import type { Metadata, Viewport } from "next"
+import { Geist_Mono, Inter } from "next/font/google"
+
+import "./globals.css"
+import { ThemeProvider } from "@/components/theme-provider"
+import { TooltipProvider } from "@/components/ui/tooltip"
+import { Toaster } from "@/components/ui/sonner"
+import { cn } from "@/lib/utils"
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
+const fontMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 export const metadata: Metadata = {
   title: { default: "Managed Agents", template: "%s · Managed Agents" },
-  description: "Agents, versions, deployments and session timelines for Managed Agents.",
-  robots: { index: false, follow: false },
-};
+  description: "Register, route, host and observe agents.",
+}
 
 export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#181b20" },
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#171717" },
   ],
-};
+}
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={cn("antialiased", fontMono.variable, "font-sans", inter.variable)}
+    >
+      <body>
+        <ThemeProvider>
+          <TooltipProvider delay={300}>
+            {children}
+            <Toaster position="bottom-right" />
+          </TooltipProvider>
+        </ThemeProvider>
+      </body>
     </html>
-  );
+  )
 }

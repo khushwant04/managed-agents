@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { aliasesForVersion, canaryTarget, describeTarget, isValidAliasName, promoteTarget, validateTarget } from "./alias";
 import { errorMessage, proxyUrl } from "./client";
-import { compactNumber, formatBytes, formatDuration, shortId } from "./format";
+import { compactNumber, formatBytes, formatDuration, shortId, timeAgo } from "./format";
 import { fillDays, niceMax, totalsByDay } from "./usage";
 import type { UsageRow } from "./api";
 
@@ -125,5 +125,19 @@ describe("format", () => {
     expect(formatDuration(65_000)).toBe("1m 05s");
     expect(shortId("ses_0123456789abcdef")).toBe("ses_01234567…");
     expect(shortId("short")).toBe("short");
+  });
+});
+
+describe("timeAgo", () => {
+  const now = Date.parse("2026-01-10T12:00:00Z");
+  it("buckets recent times", () => {
+    expect(timeAgo("2026-01-10T11:59:40Z", now)).toBe("just now");
+    expect(timeAgo("2026-01-10T11:55:00Z", now)).toBe("5m ago");
+    expect(timeAgo("2026-01-10T09:00:00Z", now)).toBe("3h ago");
+    expect(timeAgo("2026-01-08T12:00:00Z", now)).toBe("2d ago");
+  });
+  it("handles missing and invalid input", () => {
+    expect(timeAgo(null, now)).toBe("–");
+    expect(timeAgo("nope", now)).toBe("nope");
   });
 });

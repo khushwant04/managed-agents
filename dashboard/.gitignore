@@ -5,3 +5,4 @@ coverage/
 next-env.d.ts
 *.tsbuildinfo
 .env*.local
+.env

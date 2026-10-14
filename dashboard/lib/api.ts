@@ -41,6 +41,21 @@ export type ErrorBody = Schemas["ErrorBody"];
 export type AgentSpec = Schemas["AgentSpec"];
 export type DeploymentCreate = Schemas["DeploymentCreate"];
 export type DeploymentUpdate = Schemas["DeploymentUpdate"];
+export type InvokeBody = Schemas["InvokeBody"];
+export type InvokeAccepted = Schemas["InvokeAccepted"];
+export type InvokeResult = Schemas["InvokeResult"];
+export type RegisterResult = Schemas["RegisterResult"];
+export type Environment = Schemas["Environment"];
+export type EnvironmentList = Schemas["EnvironmentList"];
+export type SecretInfo = Schemas["SecretInfo"];
+export type SecretList = Schemas["SecretList"];
+export type SecretWritten = Schemas["SecretWritten"];
+export type SkillInfo = Schemas["SkillInfo"];
+export type SkillList = Schemas["SkillList"];
+export type KeyBody = Schemas["KeyBody"];
+export type KeyCreated = Schemas["KeyCreated"];
+export type PolicyResult = Schemas["PolicyResult"];
+export type ToolRef = Schemas["ToolRef"];
 
 /** Every event type the server can emit, in schema order. */
 export const EVENT_TYPES: readonly EventType[] = [
