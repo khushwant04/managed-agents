@@ -374,7 +374,10 @@ class _Sessions(_Resource):
         return (await self.c.request("GET", f"/v1/sessions/{session_id}/artifacts"))["artifacts"]
 
     async def download(self, session_id: str, artifact_id: str) -> bytes:
-        return await self.c.request("GET", f"/v1/sessions/{session_id}/artifacts/{artifact_id}")
+        resp = await self.c._http.get(f"/v1/sessions/{session_id}/artifacts/{artifact_id}")
+        if resp.status_code >= 400:
+            raise APIError(resp.status_code, _json_or_text(resp))
+        return resp.content
 
 
 class _Secrets(_Resource):

@@ -267,3 +267,28 @@ async def test_resumed_parent_reuses_its_child_session(h):
     assert (await h.run(inv.session_id))["output"] == "boss finished"
     children = await h.services.pool.fetch("SELECT id FROM sessions WHERE parent_session_id = $1", inv.session_id)
     assert [c["id"] for c in children] == [child["id"]]
+
+
+async def test_input_arriving_as_a_run_finishes_starts_a_follow_up_run(h):
+    await h.register(Agent("chat", "scripted"))
+    inv = await h.platform.invoke(h.project, "chat", "first", actor="key:test")
+
+    def answer_and_race(req):
+        # Simulate input landing after the runner's last steering check.
+        asyncio.get_running_loop().create_task(
+            h.services.pool.execute(
+                "INSERT INTO steering (session_id, run_id, message) VALUES ($1, $2, $3)",
+                inv.session_id, inv.run_id, {"role": "user", "content": [{"type": "text", "text": "late question"}]},
+            )
+        )
+        return text("first answer")
+
+    h.adapter.turns += [answer_and_race, text("late answer")]
+    await h.worker().run_once()
+    runs = await h.services.pool.fetch("SELECT id, status, trigger FROM runs WHERE session_id = $1 ORDER BY enqueued_at", inv.session_id)
+    if len(runs) == 2:  # the row landed after the last check: a follow-up run carries it
+        assert runs[1]["trigger"]["late_for_run"] == inv.run_id
+        await h.worker().run_once()
+    final = await h.run(inv.session_id)
+    assert final["output"] == "late answer"
+    assert h.adapter.requests[-1].messages[-1].text == "late question"

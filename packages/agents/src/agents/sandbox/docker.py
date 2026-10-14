@@ -45,8 +45,10 @@ async def _docker(*args: str, stdin: bytes | None = None, timeout: float | None 
 class DockerSandboxProvider:
     name = "docker"
 
-    def __init__(self, image: str = "agents-base:latest") -> None:
+    def __init__(self, image: str = "agents-base:latest", uid: int = 1000) -> None:
         self.image = image
+        self.uid = uid
+        """The sandbox image's non-root user (``user`` in infra/e2b/Dockerfile)."""
 
     async def create(self, env: Environment) -> SandboxHandle:
         name = f"agents-{uuid.uuid4().hex[:12]}"
@@ -81,8 +83,10 @@ class DockerSandboxProvider:
             for f in files:
                 info = tarfile.TarInfo(name=f.path.lstrip("/"))
                 info.size = len(f.content)
+                info.uid = info.gid = self.uid  # owned by the sandbox user, not root
+                info.mode = 0o644
                 tar.addfile(info, io.BytesIO(f.content))
-        code, _, err = await _docker("cp", "-", f"{h.id}:/", stdin=buf.getvalue())
+        code, _, err = await _docker("cp", "-a", "-", f"{h.id}:/", stdin=buf.getvalue())
         if code != 0:
             raise SandboxError(f"docker cp failed: {err.decode().strip()}")
 

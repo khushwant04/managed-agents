@@ -248,6 +248,21 @@ class Worker:
         )
         if not owned:
             return
+        # Input that arrived after the runner's last look at the steering queue starts a follow-up run.
+        leftover = await self.pool.fetch(
+            "UPDATE steering SET consumed_at = now() WHERE run_id = $1 AND consumed_at IS NULL RETURNING id, message", run["id"]
+        )
+        followed_up = False
+        if leftover and status == "finished" and session["status"] != "terminated":
+            next_run = await self.platform.queue.enqueue(
+                None,
+                session_id=session["id"],
+                project_id=session["project_id"],
+                input=[r["message"] for r in sorted(leftover, key=lambda r: r["id"])],
+                trigger={"type": "input", "late_for_run": run["id"]},
+            )
+            await self.platform.set_status(session["id"], "queued", run_id=next_run)
+            followed_up = True
         session_status = {
             "end_turn": "idle",
             "budget": "idle",
@@ -256,7 +271,7 @@ class Worker:
             "needs_input": "waiting_input",
             "error": "failed",
         }[result.stop_reason]
-        if session["status"] != "terminated":
+        if session["status"] != "terminated" and not followed_up:
             await self.platform.set_status(session["id"], session_status, run_id=run["id"], stop_reason=result.stop_reason)
         u = result.usage
         await self.pool.execute(
