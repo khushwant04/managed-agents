@@ -10,9 +10,10 @@ describe('APIError mapping', () => {
   it.each([
     [{ error: 'not_found', message: 'unknown session ses_x' }, 404, '404: unknown session ses_x', [], 'not_found'],
     [{ error: 'invalid_definition', problems: ['unknown model nope-model', 'tool f has no url'] }, 422, '422: invalid_definition (unknown model nope-model; tool f has no url)', ['unknown model nope-model', 'tool f has no url'], 'invalid_definition'],
-    [{ detail: 'missing bearer API key' }, 401, '401: missing bearer API key', [], undefined],
-    [{ detail: [{ loc: ['body', 'input'], msg: 'Field required', type: 'missing' }] }, 422, '422: [{"loc":["body","input"],"msg":"Field required","type":"missing"}]', [], undefined],
-  ])('maps %j', async (body, code, message, problems, errorCode) => {
+    [{ error: 'unauthorized', message: 'missing bearer API key' }, 401, '401: missing bearer API key', [], 'unauthorized'],
+    [{ error: 'invalid_request', message: 'invalid request body', problems: ['body.input: Field required'] }, 422, '422: invalid request body (body.input: Field required)', ['body.input: Field required'], 'invalid_request'],
+    [{ error: 'conflict', message: null, problems: null }, 409, '409: conflict', [], 'conflict'],
+  ])('maps ErrorBody %j', async (body, code, message, problems, errorCode) => {
     const { fetch } = mockFetch(() => json(body, code));
     const err = (await new Client({ fetch }).sessions.get('ses_x').catch((e: unknown) => e)) as APIError;
     expect(err).toBeInstanceOf(APIError);
@@ -23,6 +24,15 @@ describe('APIError mapping', () => {
     expect(err.message).toBe(message);
     expect(err.problems).toEqual(problems);
     expect(err.code).toBe(errorCode);
+    expect(err.error).toEqual(body);
+  });
+
+  it('keeps JSON bodies that are not an ErrorBody', async () => {
+    const { fetch } = mockFetch(() => json({ upstream: 'down' }, 503));
+    const err = (await new Client({ fetch }).deployments.list().catch((e: unknown) => e)) as APIError;
+    expect(err.message).toBe('503: {"upstream":"down"}');
+    expect(err.error).toBeUndefined();
+    expect(err.body).toEqual({ upstream: 'down' });
   });
 
   it('keeps non-JSON error bodies as text', async () => {
@@ -32,6 +42,7 @@ describe('APIError mapping', () => {
     expect(err.body).toBe('Bad Gateway');
     expect(err.message).toBe('502: Bad Gateway');
     expect(err.problems).toEqual([]);
+    expect(err.error).toBeUndefined();
   });
 });
 

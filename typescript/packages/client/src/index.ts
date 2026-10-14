@@ -4,6 +4,8 @@ export type {
   ClientOptions,
   FetchLike,
   HttpMethod,
+  PathParamsOf,
+  QueryOf,
   InvokeOptions,
   RequestOptions,
   ResponseOf,

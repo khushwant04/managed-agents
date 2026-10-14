@@ -16,7 +16,7 @@ import { Agents, Deployments, Environments, Secrets, Sessions } from './resource
 import { RemoteSession } from './session.js';
 import { abortError, parseSSE } from './sse.js';
 import { encodeSegment } from './util.js';
-import type { Event, InvokeAccepted, InvokeResult } from './types.js';
+import type { Event, InvokeAccepted, InvokeBody, InvokeResult } from './types.js';
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -76,11 +76,21 @@ export interface RunOptions {
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 type OperationOf<P extends keyof paths, M extends HttpMethod> = NonNullable<paths[P][M]>;
-type JsonContent<R> = R extends { content: { 'application/json': infer J } } ? J : never;
+type SuccessContent<R> = R extends { content: { 'application/json': infer J } }
+  ? J
+  : R extends { content: { 'application/octet-stream': unknown } }
+    ? Uint8Array
+    : never;
 type Successes<O> = O extends { responses: infer R }
-  ? { [S in keyof R]: S extends 200 | 201 | 202 ? JsonContent<R[S]> : never }[keyof R]
+  ? { [S in keyof R]: S extends 200 | 201 | 202 ? SuccessContent<R[S]> : never }[keyof R]
   : never;
-/** The JSON body a successful call returns (`void` for 204-only operations). */
+type IsBinary<O> = O extends { responses: infer R }
+  ? { [S in keyof R]: S extends 200 | 201 | 202 ? (R[S] extends { content: { 'application/octet-stream': unknown } } ? true : never) : never }[keyof R]
+  : never;
+/**
+ * What a successful call returns: the JSON body, `Uint8Array` for binary
+ * (`application/octet-stream`) responses, `void` for 204-only operations.
+ */
 export type ResponseOf<P extends keyof paths, M extends HttpMethod> = [Successes<OperationOf<P, M>>] extends [never]
   ? void
   : Successes<OperationOf<P, M>>;
@@ -92,6 +102,10 @@ type BodyOf<O> = O extends { requestBody?: infer RB }
       : never
   : never;
 type ParamsOf<O, K extends string> = O extends { parameters: infer PS } ? (PS extends { [k in K]?: infer X } ? NonNullable<X> : never) : never;
+/** The path parameters of an operation, e.g. `{ session_id: string }`. */
+export type PathParamsOf<P extends keyof paths, M extends HttpMethod> = ParamsOf<OperationOf<P, M>, 'path'>;
+/** The query parameters of an operation. */
+export type QueryOf<P extends keyof paths, M extends HttpMethod> = ParamsOf<OperationOf<P, M>, 'query'>;
 
 /** Path params, query and body for one operation, all type-checked against the spec. */
 export type CallOptions<P extends keyof paths, M extends HttpMethod> = {
@@ -100,9 +114,21 @@ export type CallOptions<P extends keyof paths, M extends HttpMethod> = {
   headers?: Record<string, string>;
 } & ([ParamsOf<OperationOf<P, M>, 'path'>] extends [never] ? { path?: never } : { path: ParamsOf<OperationOf<P, M>, 'path'> }) &
   ([ParamsOf<OperationOf<P, M>, 'query'>] extends [never] ? { query?: never } : { query?: ParamsOf<OperationOf<P, M>, 'query'> }) &
-  ([BodyOf<OperationOf<P, M>>] extends [never] ? { body?: never } : { body: BodyOf<OperationOf<P, M>> });
+  ([BodyOf<OperationOf<P, M>>] extends [never] ? { body?: never } : { body: BodyOf<OperationOf<P, M>> }) &
+  // Binary responses are returned as bytes whatever their content type (an artifact may be JSON).
+  ([IsBinary<OperationOf<P, M>>] extends [never] ? { raw?: false } : { raw: true });
 
 type OperationPaths<M extends HttpMethod> = { [P in keyof paths]: paths[P][M] extends undefined | never ? never : P }[keyof paths];
+
+/** Fill `{name}` placeholders of a spec path with encoded values. */
+function resolvePath<M extends HttpMethod, P extends OperationPaths<M>>(path: P, params?: PathParamsOf<P, M> | Record<string, string | number>): string {
+  const values = (params ?? {}) as Record<string, string | number | undefined>;
+  return (path as string).replace(/\{([^}]+)\}/g, (_, name: string) => {
+    const v = values[name];
+    if (v === undefined) throw new TypeError(`missing path parameter ${name} for ${path as string}`);
+    return encodeSegment(v);
+  });
+}
 
 function env(name: string): string | undefined {
   const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
@@ -220,7 +246,7 @@ export class Client {
 
   /**
    * Low-level request. Returns parsed JSON for JSON responses, `undefined` for 204 or
-   * an empty body, and the raw bytes (`Uint8Array`) otherwise (or always, with `raw`).
+   * an empty body, and the raw bytes (`Uint8Array`) otherwise. With `raw`, always the bytes.
    * Throws `APIError` for 4xx/5xx.
    */
   async request<T = unknown>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
@@ -236,8 +262,9 @@ export class Client {
       if (resp.status >= 400) throw new APIError(resp.status, await readBody(resp));
       if (resp.status === 204) return undefined as T;
       const bytes = new Uint8Array(await resp.arrayBuffer());
+      if (options.raw) return bytes as T;
       if (bytes.byteLength === 0) return undefined as T;
-      if (!options.raw && (resp.headers.get('content-type') ?? '').startsWith('application/json')) {
+      if ((resp.headers.get('content-type') ?? '').startsWith('application/json')) {
         return JSON.parse(new TextDecoder().decode(bytes)) as T;
       }
       return bytes as T;
@@ -254,18 +281,20 @@ export class Client {
    */
   async call<M extends HttpMethod, P extends OperationPaths<M>>(method: M, path: P, options?: CallOptions<P, M>): Promise<ResponseOf<P, M>> {
     const o = (options ?? {}) as { path?: Record<string, string | number>; query?: RequestOptions['query']; body?: unknown } & RequestOptions;
-    const resolved = (path as string).replace(/\{([^}]+)\}/g, (_, name: string) => {
-      const v = o.path?.[name];
-      if (v === undefined) throw new TypeError(`missing path parameter ${name} for ${path as string}`);
-      return encodeSegment(v);
+    return this.request<ResponseOf<P, M>>(method, resolvePath(path, o.path), {
+      query: o.query,
+      body: o.body,
+      signal: o.signal,
+      timeout: o.timeout,
+      headers: o.raw ? { Accept: '*/*', ...o.headers } : o.headers,
+      raw: o.raw,
     });
-    return this.request<ResponseOf<P, M>>(method, resolved, { query: o.query, body: o.body, signal: o.signal, timeout: o.timeout, headers: o.headers });
   }
 
   /** Start a session through the router (or a deployment) and return at once; follow it with `events()`. */
   async invoke(target: string, options: InvokeOptions | string): Promise<RemoteSession> {
     const o: InvokeOptions = typeof options === 'string' ? { input: options } : options;
-    const body = { input: o.input, mode: 'async' as const, metadata: o.metadata ?? {} };
+    const body: InvokeBody = { input: o.input, mode: 'async', metadata: o.metadata ?? {} };
     const data = (
       o.deployment
         ? await this.call('post', '/v1/deployments/{ref}/invoke', { path: { ref: o.deployment }, body, signal: o.signal })
@@ -277,11 +306,11 @@ export class Client {
   /** Invoke and wait for the run to finish (`mode: "sync"`); returns output, stop reason and usage. */
   async run(target: string, input: string, options: RunOptions = {}): Promise<InvokeResult> {
     const timeout = options.timeout ?? 300_000;
-    const body: Record<string, unknown> = { input, mode: 'sync', wait_timeout: timeout / 1000 };
+    const body: InvokeBody = { input, mode: 'sync', wait_timeout: timeout / 1000 };
     if (options.metadata) body.metadata = options.metadata;
     return (await this.call('post', '/v1/agents/{target}/invoke', {
       path: { target },
-      body: body as { input: string },
+      body,
       timeout: timeout + 30_000,
       signal: options.signal,
     })) as InvokeResult;
@@ -303,7 +332,9 @@ export class Client {
       if (signal?.aborted) throw signal.reason ?? abortError();
       const d = deadline(signal, this.timeout);
       try {
-        const resp = await this.fetchImpl(this.url(`/v1/sessions/${encodeSegment(sessionId)}/stream`, { until_settled: untilSettled ? 'true' : 'false' }), {
+        const path = resolvePath<'get', '/v1/sessions/{session_id}/stream'>('/v1/sessions/{session_id}/stream', { session_id: sessionId });
+        const query: QueryOf<'/v1/sessions/{session_id}/stream', 'get'> = { until_settled: untilSettled };
+        const resp = await this.fetchImpl(this.url(path, query), {
           method: 'GET',
           headers: { ...this.headers, Accept: 'text/event-stream', 'Last-Event-ID': String(last) },
           signal: d.signal,

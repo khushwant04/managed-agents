@@ -23,7 +23,7 @@ const cases: Case[] = [
   ['agents.rollback', (c) => c.agents.rollback('bot', 'staging'), 'POST', '/v1/agents/bot/aliases/staging/rollback'],
   ['agents.aliases', (c) => c.agents.aliases('bot'), 'GET', '/v1/agents/bot/aliases'],
   ['agents.card', (c) => c.agents.card('bot@prod'), 'GET', '/v1/agents/bot@prod/card'],
-  ['deployments.create', (c) => c.deployments.create('bot', { version: 2, secrets: ['TOKEN'] }), 'POST', '/v1/deployments', { agent: 'bot', alias: 'prod', version: 2, triggers: [{ type: 'http' }], concurrency: 10, secrets: ['TOKEN'], budget: {} }],
+  ['deployments.create', (c) => c.deployments.create('bot', { version: 2, secrets: ['TOKEN'] }), 'POST', '/v1/deployments', { agent: 'bot', version: 2, secrets: ['TOKEN'] }],
   ['deployments.list', (c) => c.deployments.list(), 'GET', '/v1/deployments'],
   ['deployments.get', (c) => c.deployments.get('dep_1'), 'GET', '/v1/deployments/dep_1'],
   ['deployments.update', (c) => c.deployments.update('dep_1', { concurrency: 3 }), 'PATCH', '/v1/deployments/dep_1', { concurrency: 3 }],
@@ -92,11 +92,14 @@ describe('resource request shapes', () => {
     expect(calls).toHaveLength(0);
   });
 
-  it('download returns bytes even for JSON artifacts', async () => {
-    const { client, calls } = setup(() => json({ a: 1 }));
+  it('download returns bytes even for JSON artifacts, and empty files as empty bytes', async () => {
+    const { client, calls } = setup((req) => (req.path.endsWith('/empty') ? new Response('', { status: 200 }) : json({ a: 1 })));
     const bytes = await client.sessions.download('ses_1', 'art_1');
+    expect(bytes).toBeInstanceOf(Uint8Array);
     expect(new TextDecoder().decode(bytes)).toBe('{"a":1}');
     expect(calls[0]!.path).toBe('/v1/sessions/ses_1/artifacts/art_1');
+    expect(calls[0]!.headers.get('accept')).toBe('*/*');
+    expect(await client.sessions.download('ses_1', 'empty')).toEqual(new Uint8Array());
   });
 
   it('history maps stored events', async () => {

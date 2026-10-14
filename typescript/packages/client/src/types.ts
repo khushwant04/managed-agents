@@ -25,9 +25,22 @@ export type RunStopReason = 'end_turn' | 'needs_input' | 'approval_pending' | 'b
  * `text`, a convenience equal to `payload.text ?? ''` (as `Event.text` in Python),
  * useful for `message.agent.delta` and `thinking.delta`.
  */
-export type Event = Required<WireEvent> & {
+export type Event = WireEvent & {
   readonly text: string;
 };
+
+/** The body of every error response: `{error, message?, problems?}`. */
+export type ErrorBody = Schemas['ErrorBody'];
+
+/** An agent definition for `client.agents.register()`. */
+export type AgentSpec = Schemas['AgentSpec'];
+export type ToolRef = Schemas['ToolRef'];
+export type SkillRef = Schemas['SkillRef'];
+export type SubagentPolicy = Schemas['SubagentPolicy'];
+export type Limits = Schemas['Limits'];
+export type DeploymentCreate = Schemas['DeploymentCreate'];
+export type DeploymentUpdate = Schemas['DeploymentUpdate'];
+export type InvokeBody = Schemas['InvokeBody'];
 
 export type AgentSummary = Schemas['AgentSummary'];
 export type AgentVersion = Schemas['AgentVersion'];
@@ -51,41 +64,3 @@ export type Environment = Schemas['Environment'];
 
 /** The agent card returned by `GET /v1/agents/{target}/card` (an open object in the spec). */
 export type AgentCard = operations['agent_card_v1_agents__target__card_get']['responses'][200]['content']['application/json'];
-
-/**
- * An agent definition for `client.agents.register()`.
- *
- * The server accepts it as an open JSON object (`AgentSpec` in the Python SDK), so
- * only the commonly used fields are typed here; anything else is passed through.
- */
-export interface AgentSpec {
-  name: string;
-  models: string[];
-  description?: string;
-  instructions?: string;
-  tools?: Record<string, unknown>[];
-  skills?: Record<string, unknown>[];
-  subagents?: unknown;
-  reasoning?: unknown;
-  model_options?: Record<string, unknown>;
-  limits?: Record<string, unknown>;
-  environment?: string | Record<string, unknown> | null;
-  input_schema?: Record<string, unknown> | null;
-  tags?: string[];
-  [key: string]: unknown;
-}
-
-/** Body of `POST /v1/deployments` (an open object in the spec). */
-export interface DeploymentCreate {
-  /** Alias to route to. Default `"prod"`. */
-  alias?: string;
-  version?: number;
-  /** Default `[{ type: 'http' }]`. */
-  triggers?: Record<string, unknown>[];
-  name?: string;
-  /** Default 10. */
-  concurrency?: number;
-  environment?: string;
-  secrets?: string[];
-  budget?: Record<string, unknown>;
-}

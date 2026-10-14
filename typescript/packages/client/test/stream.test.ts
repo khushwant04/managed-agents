@@ -11,11 +11,12 @@ async function collect(it: AsyncIterable<Event>): Promise<Event[]> {
 }
 
 describe('toEvent', () => {
-  it('adds text from payload.text and fills defaults', () => {
-    const ev = toEvent({ session_id: 's', type: 'message.agent.delta', payload: { text: 'hi' } });
-    expect(ev).toMatchObject({ id: '', session_id: 's', run_id: null, seq: 0, model: null, ts: '', text: 'hi' });
-    expect(toEvent({ session_id: 's', type: 'run.started' }).text).toBe('');
-    expect(toEvent({ session_id: 's', type: 'run.started', payload: { text: 3 } }).text).toBe('3');
+  it('adds text from payload.text and keeps the wire fields', () => {
+    const raw = wire(4, 'message.agent.delta', { text: 'hi' });
+    expect(toEvent(raw)).toEqual({ ...raw, text: 'hi' });
+    expect(toEvent(wire(5, 'run.started')).text).toBe('');
+    expect(toEvent(wire(6, 'run.started', { text: 3 })).text).toBe('3');
+    expect(() => toEvent('nope')).toThrow(TypeError);
   });
 });
 

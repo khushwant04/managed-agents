@@ -1,5 +1,4 @@
 import type { Client } from './client.js';
-import { encodeSegment } from './util.js';
 import { RemoteSession } from './session.js';
 import type {
   AgentCard,
@@ -11,6 +10,7 @@ import type {
   Artifact,
   Deployment,
   DeploymentCreate,
+  DeploymentUpdate,
   Environment,
   InterruptResult,
   RegisterResult,
@@ -97,20 +97,12 @@ export class Agents extends Resource {
 }
 
 export class Deployments extends Resource {
-  create(agent: string, options: DeploymentCreate = {}): Promise<Deployment> {
-    const body: Record<string, unknown> = {
-      agent,
-      alias: options.alias ?? 'prod',
-      version: options.version,
-      triggers: options.triggers ?? [{ type: 'http' }],
-      name: options.name,
-      concurrency: options.concurrency ?? 10,
-      environment: options.environment,
-      secrets: options.secrets ?? [],
-      budget: options.budget ?? {},
-    };
-    for (const k of Object.keys(body)) if (body[k] === undefined || body[k] === null) delete body[k];
-    return this.c.call('post', '/v1/deployments', { body });
+  /**
+   * Deploy `agent`. The server fills the defaults: alias `prod`, an `http` trigger,
+   * concurrency 10, no secrets, no budget.
+   */
+  create(agent: string, options: Omit<DeploymentCreate, 'agent'> = {}): Promise<Deployment> {
+    return this.c.call('post', '/v1/deployments', { body: { ...options, agent } });
   }
 
   async list(): Promise<Deployment[]> {
@@ -122,7 +114,7 @@ export class Deployments extends Resource {
     return this.c.call('get', '/v1/deployments/{ref}', { path: { ref } });
   }
 
-  update(ref: string, changes: Partial<DeploymentCreate> & { status?: 'active' | 'paused'; [key: string]: unknown }): Promise<Deployment> {
+  update(ref: string, changes: DeploymentUpdate): Promise<Deployment> {
     return this.c.call('patch', '/v1/deployments/{ref}', { path: { ref }, body: changes });
   }
 
@@ -190,13 +182,11 @@ export class Sessions extends Resource {
   }
 
   /** The artifact's bytes, whatever its content type. */
-  async download(sessionId: string, artifactId: string): Promise<Uint8Array> {
-    const data = await this.c.request<Uint8Array | undefined>(
-      'GET',
-      `/v1/sessions/${encodeSegment(sessionId)}/artifacts/${encodeSegment(artifactId)}`,
-      { raw: true, headers: { Accept: '*/*' } },
-    );
-    return data ?? new Uint8Array();
+  download(sessionId: string, artifactId: string): Promise<Uint8Array> {
+    return this.c.call('get', '/v1/sessions/{session_id}/artifacts/{artifact_id}', {
+      path: { session_id: sessionId, artifact_id: artifactId },
+      raw: true,
+    });
   }
 }
 

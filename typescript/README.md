@@ -75,20 +75,25 @@ await live.approve(callId);                                        // or live.de
 | `client.environments` | `put`, `list` |
 | `RemoteSession` | `events`, `history`, `send`, `approve`, `deny`, `interrupt`, `close`, `wait`, `output`, `artifacts`, `download` |
 
+Request bodies use the generated types: `register()` takes the spec's `AgentSpec` (with `ToolRef`, `SkillRef`, `Limits` and so on), `deployments.create()` and `update()` take `DeploymentCreate` and `DeploymentUpdate`, and `environments.put()` takes `Environment`. Fields you leave out get the server's defaults. `sessions.download()` returns the artifact's bytes as a `Uint8Array`, whatever its content type.
+
 For any endpoint without a wrapper (usage, audit, keys, project, skills, queues), use `client.call()`. It checks the path, method, path params, query, body and result against the generated types:
 
 ```ts
 const usage = await client.call('get', '/v1/usage', { query: { days: 7 } });
 ```
 
+Operations with a binary (`application/octet-stream`) response require `raw: true` and return a `Uint8Array`.
+
 ### Errors
 
 Non-2xx responses throw `APIError` with these fields:
 
 - `status`
-- `body`: parsed JSON, or the response text.
-- `problems`: validation problems for agent definitions, or `[]`.
-- `code`: the server's error code, such as `not_found`.
+- `error`: the server's `ErrorBody` (`{ error, message?, problems? }`). Every API error carries one; it is `undefined` only when something in between, such as a proxy, answered instead.
+- `body`: the raw parsed body: the `ErrorBody`, other JSON, or the response text.
+- `problems`: validation problems for agent definitions and request bodies, or `[]`.
+- `code`: the server's error code, such as `not_found` or `invalid_definition`.
 
 ```ts
 import { APIError } from '@managed-agents/client';
@@ -143,7 +148,7 @@ npm run check:generated   # fail if schema.ts is stale (CI)
    - Every resource method goes through `client.call()`, which is typed against `paths`. If an endpoint is renamed or a body or response changes shape, `npx tsc --noEmit` fails until the wrapper is updated.
 4. CI runs `npm run check:generated`. It regenerates into a temp file and diffs the result against the committed `schema.ts`, so a spec change without a regenerated client fails the build.
 
-Generation uses `--default-non-nullable false`. Without that flag, openapi-typescript marks every field that has a default as required, request bodies included. It would then demand, for example, `stream` and `wait_timeout` on every invoke. The cost is that defaulted response fields are typed as optional. `Event` is normalized by the client, so its fields are always present.
+Generation uses `--default-non-nullable false`. Without that flag, openapi-typescript marks every field that has a default as required, request bodies included. It would then demand, for example, `stream` and `wait_timeout` on every invoke. This matters for `InvokeBody`, `AgentSpec`, `DeploymentCreate` and `Environment`, which all have defaulted fields. The cost is that defaulted response fields that the spec does not also list as required are typed as optional. `Event` lists all of its fields as required, so they are always present.
 
 ### Integration tests
 

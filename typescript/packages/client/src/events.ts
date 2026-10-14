@@ -1,4 +1,4 @@
-import type { Event, EventType, SessionStatus } from './types.js';
+import type { Event, EventType, Schemas, SessionStatus } from './types.js';
 
 /** All event types, in the order the server defines them. */
 export const EVENT_TYPES: readonly EventType[] = [
@@ -29,24 +29,12 @@ export const SETTLED_STATUSES: ReadonlySet<SessionStatus> = new Set<SessionStatu
   'terminated',
 ]);
 
-/** Build an `Event` from its JSON form, filling server-side defaults and adding `text`. */
+/** Build an `Event` from its JSON form, adding `text` (`payload.text ?? ''`). */
 export function toEvent(raw: unknown): Event {
   if (raw === null || typeof raw !== 'object') throw new TypeError(`not an event: ${JSON.stringify(raw)}`);
-  const r = raw as Record<string, unknown>;
-  const payload = (r.payload && typeof r.payload === 'object' ? r.payload : {}) as Record<string, unknown>;
-  const text = payload.text;
-  return {
-    ...(r as object),
-    id: typeof r.id === 'string' ? r.id : '',
-    session_id: String(r.session_id ?? ''),
-    run_id: (r.run_id as string | null | undefined) ?? null,
-    seq: typeof r.seq === 'number' ? r.seq : Number(r.seq ?? 0),
-    type: r.type as EventType,
-    ts: typeof r.ts === 'string' ? r.ts : '',
-    model: (r.model as string | null | undefined) ?? null,
-    payload,
-    text: text === undefined || text === null ? '' : String(text),
-  };
+  const ev = raw as Schemas['Event'];
+  const text = ev.payload?.text;
+  return { ...ev, text: text === undefined || text === null ? '' : String(text) };
 }
 
 /**
