@@ -173,7 +173,7 @@ async def test_session_input_approvals_interrupt_and_artifacts(env):
     assert [a["path"] for a in arts] == ["report.md"]
     dl = await c.get(f"/v1/sessions/{sid}/artifacts/{arts[0]['id']}")
     assert dl.content == b"deploy-log\n" and "report.md" in dl.headers["content-disposition"]
-    assert (await c.post(f"/v1/sessions/{sid}/interrupt")).json() == {"interrupted": False}
+    assert (await c.post(f"/v1/sessions/{sid}/interrupt")).json()["interrupted"] is False
     assert (await c.delete(f"/v1/sessions/{sid}")).status_code == 204
     assert (await c.post(f"/v1/sessions/{sid}/events", json={"type": "message.user", "text": "x"})).status_code == 409
 
@@ -200,7 +200,7 @@ async def test_deployments_http_webhook_queue_and_cron(env):
     dep = r.json()
     assert dep["webhook_url"] == f"https://agents.example.com/v1/hooks/{dep['id']}"
     secret = dep["webhook_secret"]
-    assert "webhook_secret" not in (await c.get(f"/v1/deployments/{dep['name']}")).json()
+    assert (await c.get(f"/v1/deployments/{dep['name']}")).json()["webhook_secret"] is None
     bad = await c.post("/v1/deployments", json={"agent": "investigator", "triggers": [{"type": "cron", "schedule": "nope", "input": "x"}]})
     assert bad.status_code == 422
 

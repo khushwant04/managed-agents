@@ -27,7 +27,7 @@ from pydantic import BaseModel, Field
 
 from agents.events import Event
 
-from . import metrics
+from . import metrics, schemas
 from .auth import Principal, Role, authenticate, create_key
 from .registry import AliasTarget, RegistryError, audit
 from .router import RouteError
@@ -197,7 +197,7 @@ def create_app(services: Services | None = None) -> FastAPI:
 
     # -- registry --
 
-    @app.post("/v1/agents", status_code=201, tags=["agents"])
+    @app.post("/v1/agents", status_code=201, tags=["agents"], response_model=schemas.RegisterResult)
     async def register_agent(spec: dict[str, Any], response: Response, p: Principal = Depends(developer)) -> dict[str, Any]:
         platform = svc().platform
         row, created = await platform.registry.register(p.project_id, spec, p.actor, await platform.policy(p.project_id))
@@ -205,20 +205,20 @@ def create_app(services: Services | None = None) -> FastAPI:
             response.status_code = 200
         return {"name": row["name"], "version": row["version"], "hash": row["hash"], "created": created, "card": row["card"]}
 
-    @app.get("/v1/agents", tags=["agents"])
+    @app.get("/v1/agents", tags=["agents"], response_model=schemas.AgentList)
     async def search_agents(
         q: str | None = None, tag: str | None = None, owner: str | None = None, capability: str | None = None, p: Principal = Depends(viewer)
     ) -> dict[str, Any]:
         return {"agents": await svc().platform.registry.search(p.project_id, query=q, tag=tag, owner=owner, capability=capability)}
 
-    @app.get("/v1/agents/{name}/versions", tags=["agents"])
+    @app.get("/v1/agents/{name}/versions", tags=["agents"], response_model=schemas.VersionList)
     async def list_versions(name: str, p: Principal = Depends(viewer)) -> dict[str, Any]:
         versions = await svc().platform.registry.list_versions(p.project_id, name)
         if not versions:
             raise NotFound(f"unknown agent {name!r}")
         return {"name": name, "versions": versions}
 
-    @app.get("/v1/agents/{name}/versions/{version}", tags=["agents"])
+    @app.get("/v1/agents/{name}/versions/{version}", tags=["agents"], response_model=schemas.AgentVersion)
     async def get_version(name: str, version: int, p: Principal = Depends(viewer)) -> dict[str, Any]:
         row = await svc().platform.registry.get_version(p.project_id, name, version)
         if row is None:
@@ -233,17 +233,17 @@ def create_app(services: Services | None = None) -> FastAPI:
         assert row is not None
         return {**row["card"], "url": f"{svc().settings.public_url}/v1/agents/{target}/invoke"}
 
-    @app.get("/v1/agents/{name}/aliases", tags=["agents"])
+    @app.get("/v1/agents/{name}/aliases", tags=["agents"], response_model=schemas.AliasList)
     async def list_aliases(name: str, p: Principal = Depends(viewer)) -> dict[str, Any]:
         return {"name": name, "aliases": await svc().platform.registry.list_aliases(p.project_id, name)}
 
-    @app.put("/v1/agents/{name}/aliases/{alias}", tags=["agents"])
+    @app.put("/v1/agents/{name}/aliases/{alias}", tags=["agents"], response_model=schemas.AliasResult)
     async def set_alias(name: str, alias: str, body: AliasTarget, p: Principal = Depends(developer)) -> dict[str, Any]:
         row = await svc().platform.registry.set_alias(p.project_id, name, alias, body, p.actor)
         svc().platform.router.cache.invalidate(f"{p.project_id}:{name}:{alias}")
         return {"name": name, "alias": alias, "versions": row["versions"]}
 
-    @app.post("/v1/agents/{name}/aliases/{alias}/rollback", tags=["agents"])
+    @app.post("/v1/agents/{name}/aliases/{alias}/rollback", tags=["agents"], response_model=schemas.AliasResult)
     async def rollback_alias(name: str, alias: str, p: Principal = Depends(developer)) -> dict[str, Any]:
         pool = svc().pool
         last = await pool.fetchval(
@@ -271,29 +271,29 @@ def create_app(services: Services | None = None) -> FastAPI:
         run = await platform.wait_for_run(inv_run, timeout=body.wait_timeout)
         return {**base, "status": run["status"], "stop_reason": run["stop_reason"], "output": run["output"], "error": run["error"], "usage": run["usage"]}
 
-    @app.post("/v1/agents/{target}/invoke", tags=["invoke"], response_model=None)
+    @app.post("/v1/agents/{target}/invoke", tags=["invoke"], response_model=None, responses={200: {"model": schemas.InvokeResult, "description": "mode=sync"}, 202: {"model": schemas.InvokeAccepted, "description": "mode=async"}, 201: {"content": {"text/event-stream": {}}, "description": "mode=stream"}})
     async def invoke(target: str, body: InvokeBody, p: Principal = Depends(developer)) -> Response | dict[str, Any]:
         inv = await svc().platform.invoke(p.project_id, target, body.input, actor=p.actor, metadata=body.metadata, trigger={"type": "api"})
         return await _respond(inv.session_id, inv.run_id, inv.route, body)
 
     # -- deployments --
 
-    @app.post("/v1/deployments", status_code=201, tags=["deployments"])
+    @app.post("/v1/deployments", status_code=201, tags=["deployments"], response_model=schemas.Deployment)
     async def create_deployment(body: dict[str, Any], p: Principal = Depends(developer)) -> dict[str, Any]:
         dep = await svc().platform.create_deployment(p.project_id, body, p.actor)
         svc().platform.router.cache.invalidate()
         return _deployment_view(dep, svc().settings.public_url, reveal=True)
 
-    @app.get("/v1/deployments", tags=["deployments"])
+    @app.get("/v1/deployments", tags=["deployments"], response_model=schemas.DeploymentList)
     async def list_deployments(p: Principal = Depends(viewer)) -> dict[str, Any]:
         url = svc().settings.public_url
         return {"deployments": [_deployment_view(d, url) for d in await svc().platform.list_deployments(p.project_id)]}
 
-    @app.get("/v1/deployments/{ref}", tags=["deployments"])
+    @app.get("/v1/deployments/{ref}", tags=["deployments"], response_model=schemas.Deployment)
     async def get_deployment(ref: str, p: Principal = Depends(viewer)) -> dict[str, Any]:
         return _deployment_view(await svc().platform.deployment(p.project_id, ref), svc().settings.public_url)
 
-    @app.patch("/v1/deployments/{ref}", tags=["deployments"])
+    @app.patch("/v1/deployments/{ref}", tags=["deployments"], response_model=schemas.Deployment)
     async def update_deployment(ref: str, body: dict[str, Any], p: Principal = Depends(developer)) -> dict[str, Any]:
         dep = await svc().platform.update_deployment(p.project_id, ref, body, p.actor)
         svc().platform.router.cache.invalidate()
@@ -314,7 +314,7 @@ def create_app(services: Services | None = None) -> FastAPI:
             dep["project_id"], f"{dep['agent']}@{dep['alias']}", text, actor=actor, deployment=dep, trigger=trigger, metadata=metadata
         )
 
-    @app.post("/v1/deployments/{ref}/invoke", tags=["deployments"], response_model=None)
+    @app.post("/v1/deployments/{ref}/invoke", tags=["deployments"], response_model=None, responses={200: {"model": schemas.InvokeResult}, 202: {"model": schemas.InvokeAccepted}})
     async def invoke_deployment(ref: str, body: InvokeBody, p: Principal = Depends(developer)) -> Response | dict[str, Any]:
         dep = await svc().platform.deployment(p.project_id, ref)
         if not any(t["type"] == "http" for t in dep["triggers"]):
@@ -341,7 +341,7 @@ def create_app(services: Services | None = None) -> FastAPI:
         inv = await _deployment_invoke(dep, text, f"webhook:{trigger.get('provider', 'generic')}", {"type": "webhook", "provider": trigger.get("provider", "generic")})
         return JSONResponse({"session_id": inv.session_id, "run_id": inv.run_id}, status_code=202)
 
-    @app.post("/v1/queues/{name}/messages", status_code=202, tags=["deployments"])
+    @app.post("/v1/queues/{name}/messages", status_code=202, tags=["deployments"], response_model=schemas.QueueResult)
     async def queue_message(name: str, body: QueueMessage, p: Principal = Depends(developer)) -> dict[str, Any]:
         started = []
         for dep in await svc().platform.list_deployments(p.project_id):
@@ -354,11 +354,11 @@ def create_app(services: Services | None = None) -> FastAPI:
 
     # -- sessions --
 
-    @app.get("/v1/sessions", tags=["sessions"])
+    @app.get("/v1/sessions", tags=["sessions"], response_model=schemas.SessionList)
     async def list_sessions(agent: str | None = None, limit: int = Query(50, le=500), p: Principal = Depends(viewer)) -> dict[str, Any]:
         return {"sessions": await svc().platform.list_sessions(p.project_id, agent=agent, limit=limit)}
 
-    @app.get("/v1/sessions/{session_id}", tags=["sessions"])
+    @app.get("/v1/sessions/{session_id}", tags=["sessions"], response_model=schemas.Session)
     async def get_session(session_id: str, p: Principal = Depends(viewer)) -> dict[str, Any]:
         s = await svc().platform.session(p.project_id, session_id)
         s.pop("sandbox", None)
@@ -370,7 +370,7 @@ def create_app(services: Services | None = None) -> FastAPI:
         s["last_run"] = dict(last) if last else None
         return s
 
-    @app.post("/v1/sessions/{session_id}/events", tags=["sessions"])
+    @app.post("/v1/sessions/{session_id}/events", tags=["sessions"], response_model=schemas.SessionEventResult)
     async def send_event(session_id: str, body: SessionEventBody, p: Principal = Depends(developer)) -> dict[str, Any]:
         platform = svc().platform
         if body.type == "message.user":
@@ -382,7 +382,7 @@ def create_app(services: Services | None = None) -> FastAPI:
         approved = body.approved if body.approved is not None else body.decision == "approve"
         return await platform.decide_approval(p.project_id, session_id, body.call_id, approved, body.reason, p.actor)
 
-    @app.get("/v1/sessions/{session_id}/events", tags=["sessions"])
+    @app.get("/v1/sessions/{session_id}/events", tags=["sessions"], response_model=schemas.EventList)
     async def session_events(session_id: str, after: int = 0, limit: int = Query(1000, le=10000), p: Principal = Depends(viewer)) -> dict[str, Any]:
         await svc().platform.session(p.project_id, session_id)
         events = await svc().platform.events.read(session_id, after, limit)
@@ -442,7 +442,7 @@ def create_app(services: Services | None = None) -> FastAPI:
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await sender
 
-    @app.post("/v1/sessions/{session_id}/interrupt", tags=["sessions"])
+    @app.post("/v1/sessions/{session_id}/interrupt", tags=["sessions"], response_model=schemas.InterruptResult)
     async def interrupt(session_id: str, p: Principal = Depends(developer)) -> dict[str, Any]:
         return await svc().platform.interrupt(p.project_id, session_id, p.actor)
 
@@ -451,7 +451,7 @@ def create_app(services: Services | None = None) -> FastAPI:
         await svc().platform.terminate(p.project_id, session_id, p.actor)
         return Response(status_code=204)
 
-    @app.get("/v1/sessions/{session_id}/artifacts", tags=["sessions"])
+    @app.get("/v1/sessions/{session_id}/artifacts", tags=["sessions"], response_model=schemas.ArtifactList)
     async def artifacts(session_id: str, p: Principal = Depends(viewer)) -> dict[str, Any]:
         return {"artifacts": await svc().platform.list_artifacts(p.project_id, session_id)}
 
@@ -465,14 +465,14 @@ def create_app(services: Services | None = None) -> FastAPI:
 
     # -- secrets, environments, skills --
 
-    @app.post("/v1/secrets", status_code=201, tags=["secrets"])
+    @app.post("/v1/secrets", status_code=201, tags=["secrets"], response_model=schemas.SecretWritten)
     async def put_secret(body: SecretBody, p: Principal = Depends(admin)) -> dict[str, Any]:
         store = svc().platform.secrets
         if store is None:
             raise Conflict("secrets are disabled: set AGENTS_MASTER_KEY on the server")
         return {"name": body.name, "version": await store.put(p.project_id, body.name, body.value, p.actor)}
 
-    @app.get("/v1/secrets", tags=["secrets"])
+    @app.get("/v1/secrets", tags=["secrets"], response_model=schemas.SecretList)
     async def list_secrets(p: Principal = Depends(viewer)) -> dict[str, Any]:
         store = svc().platform.secrets
         return {"secrets": await store.list(p.project_id) if store else []}
@@ -484,25 +484,25 @@ def create_app(services: Services | None = None) -> FastAPI:
             raise NotFound(f"no secret {name}")
         return Response(status_code=204)
 
-    @app.post("/v1/environments", status_code=201, tags=["environments"])
+    @app.post("/v1/environments", status_code=201, tags=["environments"], response_model=schemas.Environment)
     async def put_environment(body: dict[str, Any], p: Principal = Depends(developer)) -> dict[str, Any]:
         name = body.pop("name", None)
         if not name:
             raise ValueError("an environment needs a name")
         return await svc().platform.put_environment(p.project_id, name, body, p.actor)
 
-    @app.get("/v1/environments", tags=["environments"])
+    @app.get("/v1/environments", tags=["environments"], response_model=schemas.EnvironmentList)
     async def list_environments(p: Principal = Depends(viewer)) -> dict[str, Any]:
         return {"environments": await svc().platform.list_environments(p.project_id)}
 
-    @app.post("/v1/skills", status_code=201, tags=["skills"])
+    @app.post("/v1/skills", status_code=201, tags=["skills"], response_model=schemas.SkillUploaded)
     async def upload_skill(request: Request, p: Principal = Depends(developer)) -> dict[str, Any]:
         data = await request.body()
         if len(data) > 20 * 1024 * 1024:
             raise HTTPException(413, "skill bundles are limited to 20 MB")
         return await svc().platform.upload_skill(p.project_id, data, p.actor)
 
-    @app.get("/v1/skills", tags=["skills"])
+    @app.get("/v1/skills", tags=["skills"], response_model=schemas.SkillList)
     async def list_skills(p: Principal = Depends(viewer)) -> dict[str, Any]:
         recs = await svc().pool.fetch(
             "SELECT name, version, description, size_bytes, created_at FROM skills WHERE project_id = $1 ORDER BY name, created_at", p.project_id
@@ -511,17 +511,17 @@ def create_app(services: Services | None = None) -> FastAPI:
 
     # -- project administration --
 
-    @app.get("/v1/project", tags=["project"])
+    @app.get("/v1/project", tags=["project"], response_model=schemas.Project)
     async def get_project(p: Principal = Depends(viewer)) -> dict[str, Any]:
         rec = await svc().pool.fetchrow("SELECT id, name, policy, created_at FROM projects WHERE id = $1", p.project_id)
         return {**dict(rec), "role": p.role}
 
-    @app.put("/v1/project/policy", tags=["project"])
+    @app.put("/v1/project/policy", tags=["project"], response_model=schemas.PolicyResult)
     async def put_policy(policy: dict[str, Any], p: Principal = Depends(admin)) -> dict[str, Any]:
         await svc().platform.set_policy(p.project_id, policy, p.actor)
         return {"policy": policy}
 
-    @app.post("/v1/keys", status_code=201, tags=["project"])
+    @app.post("/v1/keys", status_code=201, tags=["project"], response_model=schemas.KeyCreated)
     async def new_key(body: KeyBody, p: Principal = Depends(admin)) -> dict[str, Any]:
         key_id, key = await create_key(svc().pool, p.project_id, body.name, body.role)
         await audit(svc().pool, p.project_id, p.actor, "key.create", key_id, {"role": body.role})
@@ -535,11 +535,11 @@ def create_app(services: Services | None = None) -> FastAPI:
         await audit(svc().pool, p.project_id, p.actor, "key.revoke", key_id)
         return Response(status_code=204)
 
-    @app.get("/v1/usage", tags=["project"])
+    @app.get("/v1/usage", tags=["project"], response_model=schemas.UsageList)
     async def usage(days: int = Query(30, le=365), p: Principal = Depends(viewer)) -> dict[str, Any]:
         return {"usage": await svc().platform.usage(p.project_id, days=days)}
 
-    @app.get("/v1/audit", tags=["project"])
+    @app.get("/v1/audit", tags=["project"], response_model=schemas.AuditList)
     async def audit_log(limit: int = Query(100, le=1000), p: Principal = Depends(admin)) -> dict[str, Any]:
         recs = await svc().pool.fetch(
             "SELECT actor, action, target, details, at FROM audit_log WHERE project_id = $1 ORDER BY id DESC LIMIT $2", p.project_id, limit
