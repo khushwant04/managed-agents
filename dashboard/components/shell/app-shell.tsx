@@ -5,10 +5,10 @@ import { MotionConfig } from "motion/react"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { AppSidebar } from "./app-sidebar"
 import { CommandMenu } from "./command-menu"
-import { SiteHeader } from "./site-header"
+import { MobileHeader } from "./mobile-header"
 import { ProjectProvider, type ProjectInfo } from "./project-context"
 
-/** Signed-in console chrome: sidebar, sticky header, command menu. */
+/** Signed-in console chrome: sidebar, command menu, and a header on phones only. */
 export function AppShell({
   project,
   defaultOpen,
@@ -31,7 +31,7 @@ export function AppShell({
         <SidebarProvider defaultOpen={defaultOpen}>
           <AppSidebar onSearch={() => setSearchOpen(true)} />
           <SidebarInset className="min-w-0">
-            <SiteHeader />
+            <MobileHeader />
             <div id="main" tabIndex={-1} className="flex flex-1 flex-col outline-none">
               {children}
             </div>

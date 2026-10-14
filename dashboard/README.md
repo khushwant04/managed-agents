@@ -55,7 +55,7 @@ It is a Next.js 16 App Router app scaffolded with `npx shadcn@latest init --pres
   - sections with chevrons that unfold around the current page;
   - a footer with docs, 30-day token usage and the signed-in key.
 
-  Collapsed to icons, each section becomes one icon that opens a flyout of its pages. The header holds breadcrumbs and a theme switch.
+  Collapsed to icons, each section becomes one icon that opens a flyout of its pages. There is no header on desktop: detail pages carry a back link, and the theme switch lives in the account menu and Settings. On phones a slim bar opens the sidebar.
 
 ![Dark mode](docs/dashboard-dark.png)
 

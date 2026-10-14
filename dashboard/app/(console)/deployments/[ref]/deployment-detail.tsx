@@ -48,7 +48,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { CodeBlock } from "@/components/code-block"
 import { CopyButton } from "@/components/copy-button"
 import { FadeIn, Stagger, StaggerItem } from "@/components/motion"
-import { Page, PageHeader } from "@/components/page"
+import { BackLink, Page, PageHeader } from "@/components/page"
 import { ErrorState } from "@/components/states"
 import { StatusBadge } from "@/components/status-badge"
 import { useCan, useProject } from "@/components/shell/project-context"
@@ -136,6 +136,7 @@ export function DeploymentDetail({ deploymentRef }: { deploymentRef: string }) {
 
   return (
     <Page>
+      <BackLink href="/deployments">Deployments</BackLink>
       <PageHeader
         eyebrow="Deployment"
         title={

@@ -62,7 +62,7 @@ export function SettingsView({ initialTab }: { initialTab: SettingsTab }) {
 
       <div className="flex flex-col gap-6 md:flex-row md:gap-10">
         <nav aria-label="Settings sections" className="-mx-4 shrink-0 overflow-x-auto px-4 md:mx-0 md:w-48 md:overflow-visible md:px-0">
-          <ul className="flex gap-1 md:sticky md:top-20 md:flex-col">
+          <ul className="flex gap-1 md:sticky md:top-8 md:flex-col">
             {TABS.map((t) => {
               const active = tab === t.value
               return (

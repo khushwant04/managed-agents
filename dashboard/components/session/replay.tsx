@@ -110,7 +110,7 @@ function TransportBar({
       transition={{ duration: 0.35, ease: EASE_OUT }}
       role="group"
       aria-label="Replay controls"
-      className="sticky top-14 z-10 flex flex-col gap-2.5 rounded-xl bg-card/90 p-3 shadow-elevated ring-1 ring-foreground/10 backdrop-blur-md"
+      className="sticky top-4 z-10 flex flex-col gap-2.5 rounded-xl bg-card/90 p-3 shadow-elevated ring-1 ring-foreground/10 backdrop-blur-md"
     >
       <div className="flex flex-wrap items-center gap-1.5">
         <IconButton label="Go to start" onClick={() => dispatch({ type: "start" })} disabled={cursor === 0}>

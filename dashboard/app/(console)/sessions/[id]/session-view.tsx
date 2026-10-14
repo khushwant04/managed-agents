@@ -36,7 +36,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { AgentArt } from "@/components/agent-art"
 import { CopyButton } from "@/components/copy-button"
 import { EASE_OUT, FadeIn } from "@/components/motion"
-import { Page } from "@/components/page"
+import { BackLink, Page } from "@/components/page"
 import { EmptyState, ErrorState } from "@/components/states"
 import { StatusBadge } from "@/components/status-badge"
 import { Composer } from "@/components/session/composer"
@@ -113,6 +113,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
 
   return (
     <Page className="max-w-7xl">
+      <BackLink href="/sessions">Sessions</BackLink>
       <Header
         sessionId={sessionId}
         session={s}
@@ -199,7 +200,7 @@ export function SessionView({ sessionId }: { sessionId: string }) {
           )}
         </section>
 
-        <FadeIn delay={0.1} className="lg:sticky lg:top-16">
+        <FadeIn delay={0.1} className="lg:sticky lg:top-6">
           <SidePanel
             sessionId={sessionId}
             session={s}

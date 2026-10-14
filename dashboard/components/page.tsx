@@ -1,4 +1,6 @@
 import * as React from "react"
+import Link from "next/link"
+import { ChevronLeftIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { FadeIn } from "@/components/motion"
 
@@ -92,5 +94,18 @@ export function Section({
       ) : null}
       {children}
     </section>
+  )
+}
+
+/** Small link back to the parent list, shown above a detail page's title. */
+export function BackLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="group/back -mb-2 inline-flex w-fit items-center gap-1 rounded-md text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+    >
+      <ChevronLeftIcon className="size-4 transition-transform duration-200 ease-(--ease-out-quint) group-hover/back:-translate-x-0.5" />
+      {children}
+    </Link>
   )
 }

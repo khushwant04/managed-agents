@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Spinner } from "@/components/ui/spinner"
-import { Page } from "@/components/page"
+import { BackLink, Page } from "@/components/page"
 import { FadeIn } from "@/components/motion"
 import { AgentArt } from "@/components/agent-art"
 import { EmptyState, ErrorState } from "@/components/states"
@@ -117,6 +117,7 @@ export function AgentView({ name }: { name: string }) {
 
   return (
     <Page className="gap-6">
+      <BackLink href="/agents">Agents</BackLink>
       <FadeIn y={4} className="flex flex-col">
         <div className="relative overflow-hidden rounded-xl ring-1 ring-foreground/10">
           <AgentArt name={name} className="h-24 md:h-32" />
