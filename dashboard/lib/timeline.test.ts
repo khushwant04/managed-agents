@@ -5,7 +5,7 @@ import { applyEvent, applyEvents, buildTimeline, emptyTimeline, mergeEvents, typ
 let seq = 0;
 function ev(type: EventType, payload: Record<string, unknown> = {}, extra: Partial<ApiEvent> = {}): ApiEvent {
   seq += 1;
-  return { id: `evt_${seq}`, session_id: "ses_1", run_id: "run_1", seq, type, ts: new Date(1_700_000_000_000 + seq * 100).toISOString(), payload, ...extra };
+  return { id: `evt_${seq}`, session_id: "ses_1", run_id: "run_1", seq, type, ts: new Date(1_700_000_000_000 + seq * 100).toISOString(), model: null, payload, ...extra };
 }
 
 function session(): ApiEvent[] {
@@ -112,19 +112,6 @@ describe("buildTimeline", () => {
     const t = buildTimeline([...events, ...events.slice(10)]);
     expect(t.count).toBe(16);
     expect(t.items).toHaveLength(11);
-  });
-});
-
-describe("status", () => {
-  it("derives the session status from run.finished until a status event says otherwise", () => {
-    seq = 0;
-    const base = [ev("session.status", { status: "running" }), ev("run.finished", { stop_reason: "end_turn", usage: {} })];
-    expect(buildTimeline(base).status).toBe("idle");
-    expect(buildTimeline([...base, ev("session.status", { status: "queued" })]).status).toBe("queued");
-    seq = 0;
-    expect(buildTimeline([ev("run.finished", { stop_reason: "error" })]).status).toBe("failed");
-    seq = 0;
-    expect(buildTimeline([ev("session.status", { status: "terminated" }), ev("run.finished", { stop_reason: "interrupted" })]).status).toBe("terminated");
   });
 });
 

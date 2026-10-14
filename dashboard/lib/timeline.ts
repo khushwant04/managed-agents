@@ -160,20 +160,6 @@ function zeroUsage(): TokenUsage {
 const str = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
 const num = (v: unknown): number | undefined => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
 
-/**
- * Session status implied by a run's stop reason (mirrors the worker). A later
- * `session.status` event overrides it; this keeps the view right when a run
- * finishes without one.
- */
-export const STATUS_AFTER_STOP: Record<string, string> = {
-  end_turn: "idle",
-  budget: "idle",
-  interrupted: "idle",
-  approval_pending: "approval_pending",
-  needs_input: "waiting_input",
-  error: "failed",
-};
-
 export function parseUsage(v: unknown): TokenUsage | null {
   if (!v || typeof v !== "object") return null;
   const u = v as Record<string, unknown>;
@@ -297,8 +283,6 @@ function apply(d: Draft, ev: ApiEvent): void {
       break;
     case "run.finished": {
       closeAgent(d, runKey);
-      const implied = STATUS_AFTER_STOP[str(p.stop_reason) ?? ""];
-      if (implied && d.s.status !== "terminated") d.s.status = implied;
       const usage = parseUsage(p.usage);
       if (usage) {
         const u = { ...d.s.usage };

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import type { Project } from "@/lib/api";
+import type { ErrorBody, Project } from "@/lib/api";
 import { COOKIE_BASE, COOKIE_KEY, COOKIE_PROJECT, SESSION_MAX_AGE_S, isSameOrigin, resolveUpstream } from "@/lib/proxy";
 import { config, secureCookies } from "@/lib/server/auth";
 
@@ -7,22 +7,26 @@ import { config, secureCookies } from "@/lib/server/auth";
  * Sign in with an API key: validate it against `GET /v1/project` on the chosen
  * upstream, then keep it in an httpOnly cookie. The key never reaches page JS.
  */
+function fail(status: number, error: string, message: string) {
+  return NextResponse.json<ErrorBody>({ error, message }, { status });
+}
+
 export async function POST(req: NextRequest) {
   if (!isSameOrigin(req.headers)) {
-    return NextResponse.json({ error: "cross-origin request refused" }, { status: 403 });
+    return fail(403, "forbidden", "cross-origin request refused");
   }
   let body: { apiKey?: unknown; serverUrl?: unknown };
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "expected a JSON body" }, { status: 400 });
+    return fail(400, "bad_request", "expected a JSON body");
   }
   const apiKey = typeof body.apiKey === "string" ? body.apiKey.trim() : "";
-  if (!apiKey) return NextResponse.json({ error: "enter an API key" }, { status: 400 });
+  if (!apiKey) return fail(400, "bad_request", "enter an API key");
   const cfg = config();
   const base = resolveUpstream(cfg, typeof body.serverUrl === "string" ? body.serverUrl : null);
   if (!base) {
-    return NextResponse.json({ error: "that server is not on this dashboard's allowlist (AGENTS_API_URL_ALLOWLIST)" }, { status: 400 });
+    return fail(400, "bad_request", "that server is not on this dashboard's allowlist (AGENTS_API_URL_ALLOWLIST)");
   }
 
   let res: Response;
@@ -33,13 +37,13 @@ export async function POST(req: NextRequest) {
       signal: AbortSignal.timeout(10_000),
     });
   } catch {
-    return NextResponse.json({ error: `could not reach ${base}` }, { status: 502 });
+    return fail(502, "bad_gateway", `could not reach ${base}`);
   }
   if (res.status === 401 || res.status === 403) {
-    return NextResponse.json({ error: "that API key was not accepted" }, { status: 401 });
+    return fail(401, "unauthenticated", "that API key was not accepted");
   }
   if (!res.ok) {
-    return NextResponse.json({ error: `the server answered ${res.status}` }, { status: 502 });
+    return fail(502, "bad_gateway", `the server answered ${res.status}`);
   }
   const project = (await res.json()) as Project;
 

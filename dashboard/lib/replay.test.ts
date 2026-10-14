@@ -4,7 +4,9 @@ import { initialReplay, nextDelay, recordedOffsetMs, replayReducer, replaySessio
 import { buildTimeline } from "./timeline";
 
 const events: ApiEvent[] = [0, 100, 150, 5150, 5200].map((ms, i) => ({
+  id: `evt_${i + 1}`,
   session_id: "s",
+  model: null,
   seq: i + 1,
   type: i === 0 ? "message.user" : "message.agent.delta",
   ts: new Date(1_700_000_000_000 + ms).toISOString(),

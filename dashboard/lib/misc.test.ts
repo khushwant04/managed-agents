@@ -101,9 +101,13 @@ describe("client helpers", () => {
 
   it("extracts error messages from the server's error shapes", () => {
     expect(errorMessage(404, { error: "not_found", message: "no agent bot" })).toBe("no agent bot");
+    expect(errorMessage(422, { error: "invalid_request", problems: ["body.versions: too short", "x: bad"] })).toBe("body.versions: too short; x: bad");
+    expect(errorMessage(422, { error: "invalid_definition", message: null, problems: ["a", "b"] })).toBe("a; b");
+    expect(errorMessage(409, { error: "conflict" })).toBe("conflict");
+    expect(errorMessage(429, { error: "rate_limited", message: "", problems: [] })).toBe("rate limited");
+    // Older servers: bare FastAPI errors.
     expect(errorMessage(403, { detail: "this needs the admin role" })).toBe("this needs the admin role");
     expect(errorMessage(422, { detail: [{ msg: "field required" }, { msg: "too big" }] })).toBe("field required; too big");
-    expect(errorMessage(422, { error: "invalid_definition", problems: ["a", "b"] })).toBe("a; b");
     expect(errorMessage(500, null)).toBe("request failed (500)");
   });
 });

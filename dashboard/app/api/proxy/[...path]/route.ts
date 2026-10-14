@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import type { ErrorBody } from "@/lib/api";
 import { FORWARD_REQUEST_HEADERS, FORWARD_RESPONSE_HEADERS, SSE_PREAMBLE, isSameOrigin, pickHeaders, prependChunk, upstreamUrl } from "@/lib/proxy";
 import { credentialsFrom } from "@/lib/server/auth";
 
@@ -12,13 +13,13 @@ type Ctx = { params: Promise<{ path: string[] }> };
 
 async function handle(req: NextRequest, ctx: Ctx): Promise<Response> {
   const creds = credentialsFrom(req);
-  if (!creds) return NextResponse.json({ error: "unauthenticated", message: "Sign in again." }, { status: 401 });
+  if (!creds) return NextResponse.json<ErrorBody>({ error: "unauthenticated", message: "Sign in again." }, { status: 401 });
   if (req.method !== "GET" && req.method !== "HEAD" && !isSameOrigin(req.headers)) {
-    return NextResponse.json({ error: "forbidden", message: "cross-origin request refused" }, { status: 403 });
+    return NextResponse.json<ErrorBody>({ error: "forbidden", message: "cross-origin request refused" }, { status: 403 });
   }
   const { path } = await ctx.params;
   const target = upstreamUrl(creds.base, path, req.nextUrl.search);
-  if (!target) return NextResponse.json({ error: "not_found", message: "only /v1 API paths are proxied" }, { status: 404 });
+  if (!target) return NextResponse.json<ErrorBody>({ error: "not_found", message: "only /v1 API paths are proxied" }, { status: 404 });
 
   const headers = pickHeaders(req.headers, FORWARD_REQUEST_HEADERS);
   headers.set("Authorization", `Bearer ${creds.key}`);
@@ -37,7 +38,7 @@ async function handle(req: NextRequest, ctx: Ctx): Promise<Response> {
     });
   } catch (err) {
     if (req.signal.aborted) return new Response(null, { status: 499 });
-    return NextResponse.json({ error: "bad_gateway", message: `could not reach the API server: ${(err as Error).message}` }, { status: 502 });
+    return NextResponse.json<ErrorBody>({ error: "bad_gateway", message: `could not reach the API server: ${(err as Error).message}` }, { status: 502 });
   }
 
   const out = pickHeaders(upstream.headers, FORWARD_RESPONSE_HEADERS);

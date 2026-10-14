@@ -95,7 +95,6 @@ The timeline reducer, `lib/timeline.ts`, works like this:
 - Deltas are joined per run until `message.agent.done` (its text wins) or a tool call.
 - Tool calls and results are matched by call id, as are approval requests and decisions, and subagent starts and finishes by child session.
 - Events at or below the last applied `seq` are dropped, so history and the live stream can overlap safely.
-- The session status also follows `run.finished` stop reasons, so the view is right even when no final `session.status` event arrives.
 - `applyEvent` is immutable (React state) and `buildTimeline` folds a whole log with a mutable draft.
 
 Replay steps forward incrementally and rebuilds only when seeking backwards.

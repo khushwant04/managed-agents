@@ -127,11 +127,15 @@ export function eventFromMessage(msg: SSEMessage): ApiEvent | null {
   if (!isEventType(type)) return null;
   let seq = typeof ev.seq === "number" ? ev.seq : undefined;
   if (seq === undefined && msg.id !== undefined && /^\d+$/.test(msg.id)) seq = Number(msg.id);
+  const n = seq ?? 0;
   return {
-    ...ev,
+    id: typeof ev.id === "string" ? ev.id : `seq_${n}`,
     session_id: ev.session_id ?? "",
+    run_id: ev.run_id ?? null,
+    seq: n,
     type,
-    seq: seq ?? 0,
-    payload: ev.payload ?? {},
-  } as ApiEvent;
+    ts: ev.ts ?? "",
+    model: ev.model ?? null,
+    payload: ev.payload && typeof ev.payload === "object" ? ev.payload : {},
+  };
 }

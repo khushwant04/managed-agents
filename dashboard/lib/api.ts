@@ -37,6 +37,10 @@ export type UsageList = Schemas["UsageList"];
 export type AuditEntry = Schemas["AuditEntry"];
 export type AuditList = Schemas["AuditList"];
 export type Run = Schemas["Run"];
+export type ErrorBody = Schemas["ErrorBody"];
+export type AgentSpec = Schemas["AgentSpec"];
+export type DeploymentCreate = Schemas["DeploymentCreate"];
+export type DeploymentUpdate = Schemas["DeploymentUpdate"];
 
 /** Every event type the server can emit, in schema order. */
 export const EVENT_TYPES: readonly EventType[] = [
@@ -60,6 +64,11 @@ export const EVENT_TYPES: readonly EventType[] = [
 
 /** Session statuses in which no run is in flight. */
 export const SETTLED_STATUSES = new Set(["idle", "waiting_input", "approval_pending", "failed", "terminated"]);
+
+/** The server's error shape (`{error, message?, problems?}`) on every route. */
+export function isErrorBody(value: unknown): value is ErrorBody {
+  return !!value && typeof value === "object" && typeof (value as { error?: unknown }).error === "string";
+}
 
 export function isEventType(value: unknown): value is EventType {
   return typeof value === "string" && (EVENT_TYPES as readonly string[]).includes(value);

@@ -5,7 +5,7 @@ import { useEffect, useReducer, useRef, useState, type FormEvent } from "react";
 import { ConfirmDialog } from "@/components/dialog";
 import { Empty, ErrorBanner, PageHead, StatusBadge, Time } from "@/components/ui";
 import { useApi, useMutation } from "@/components/use-api";
-import { SETTLED_STATUSES, type ApiEvent, type ArtifactList, type InterruptResult, type Session, type SessionEventResult } from "@/lib/api";
+import { SETTLED_STATUSES, type ApiEvent, type ArtifactList, type InterruptResult, type Session, type SessionEventBody, type SessionEventResult } from "@/lib/api";
 import { api, proxyUrl, seg } from "@/lib/client";
 import { formatBytes, formatDuration, formatTime, shortId } from "@/lib/format";
 import { nextDelay, recordedOffsetMs, REPLAY_SPEEDS, replaySessionReducer, startReplay } from "@/lib/replay";
@@ -120,10 +120,8 @@ export function SessionView({ sessionId }: { sessionId: string }) {
                   sessionId={sessionId}
                   live={connection === "live"}
                   onDecide={async (callId, approved, reason) => {
-                    await api<SessionEventResult>(`${base}/events`, {
-                      method: "POST",
-                      json: { type: "tool.approval.decided", call_id: callId, approved, ...(reason.trim() ? { reason: reason.trim() } : {}) },
-                    });
+                    const decision: SessionEventBody = { type: "tool.approval.decided", call_id: callId, approved, reason: reason.trim() || null };
+                    await api<SessionEventResult>(`${base}/events`, { method: "POST", json: decision });
                   }}
                 />
               )}
@@ -236,7 +234,8 @@ function Composer({ sessionId, status }: { sessionId: string; status: string | n
     e?.preventDefault();
     const body = text.trim();
     if (!body) return;
-    const res = await send.run(() => api<SessionEventResult>(`${base}/events`, { method: "POST", json: { type: "message.user", text: body } }));
+    const message: SessionEventBody = { type: "message.user", text: body };
+    const res = await send.run(() => api<SessionEventResult>(`${base}/events`, { method: "POST", json: message }));
     if (res) {
       setText("");
       setNotice(res.steered ? "Sent to the running turn." : "Message sent.");

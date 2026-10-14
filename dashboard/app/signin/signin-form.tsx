@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { errorMessage } from "@/lib/client";
 
 export function SignInForm({ defaultUrl, allowed, next }: { defaultUrl: string; allowed: string[]; next: string }) {
   const [apiKey, setApiKey] = useState("");
@@ -18,9 +19,8 @@ export function SignInForm({ defaultUrl, allowed, next }: { defaultUrl: string; 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ apiKey, serverUrl: serverUrl === defaultUrl ? "" : serverUrl }),
       });
-      const body = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setError(body.error ?? `sign-in failed (${res.status})`);
+        setError(errorMessage(res.status, await res.json().catch(() => null)));
         return;
       }
       window.location.assign(next);

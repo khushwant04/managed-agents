@@ -74,7 +74,7 @@ export interface DelayOptions {
  * next event), from the gap between its timestamp and the previous one,
  * clamped to [minMs, maxMs] and divided by speed.
  */
-export function nextDelay(events: readonly Pick<ApiEvent, "ts">[], cursor: number, speed: number, opts: DelayOptions = {}): number {
+export function nextDelay(events: readonly { ts?: string | null }[], cursor: number, speed: number, opts: DelayOptions = {}): number {
   const minMs = opts.minMs ?? 15;
   const maxMs = opts.maxMs ?? 1500;
   if (cursor <= 0 || cursor >= events.length) return minMs / speed;
@@ -105,7 +105,7 @@ export function timelineAt(cache: ReplayCache | null, events: readonly ApiEvent[
 }
 
 /** Recorded time elapsed between the first event and the one at the cursor, in ms. */
-export function recordedOffsetMs(events: readonly Pick<ApiEvent, "ts">[], cursor: number): number {
+export function recordedOffsetMs(events: readonly { ts?: string | null }[], cursor: number): number {
   if (events.length === 0 || cursor <= 0) return 0;
   const first = Date.parse(events[0]?.ts ?? "");
   const at = Date.parse(events[Math.min(cursor, events.length) - 1]?.ts ?? "");

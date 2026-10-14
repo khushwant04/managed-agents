@@ -1,3 +1,5 @@
+import { isErrorBody } from "./api";
+
 /**
  * Browser-side API access. Everything goes through the dashboard's own
  * `/api/proxy/...` route, which adds the API key server-side.
@@ -11,6 +13,7 @@ export class ApiError extends Error {
     message: string,
     readonly body: unknown,
   ) {
+    // `body` is the parsed response; an `ErrorBody` when the API produced the error.
     super(message);
     this.name = "ApiError";
   }
@@ -30,19 +33,23 @@ export function proxyUrl(path: string, query?: Record<string, string | number | 
 /** Path segment encoder for names and ids inside API paths. */
 export const seg = (s: string | number) => encodeURIComponent(String(s));
 
-/** Human-readable message from an API error body (FastAPI `detail`, our `message`/`error`, or validation problems). */
+/**
+ * Human-readable message from an error response: the API's `ErrorBody`
+ * (`message`, then `problems`, then the `error` code), falling back to a bare
+ * FastAPI `detail` from older servers.
+ */
 export function errorMessage(status: number, body: unknown): string {
+  if (isErrorBody(body)) {
+    if (body.message) return body.message;
+    if (body.problems?.length) return body.problems.join("; ");
+    return body.error.replace(/_/g, " ");
+  }
   if (body && typeof body === "object") {
-    const b = body as Record<string, unknown>;
-    if (typeof b.message === "string" && b.message) return b.message;
-    if (typeof b.detail === "string") return b.detail;
-    if (Array.isArray(b.detail)) {
-      return b.detail
-        .map((d) => (d && typeof d === "object" && "msg" in d ? String((d as { msg: unknown }).msg) : JSON.stringify(d)))
-        .join("; ");
+    const detail = (body as { detail?: unknown }).detail;
+    if (typeof detail === "string") return detail;
+    if (Array.isArray(detail)) {
+      return detail.map((d) => (d && typeof d === "object" && "msg" in d ? String((d as { msg: unknown }).msg) : JSON.stringify(d))).join("; ");
     }
-    if (Array.isArray(b.problems)) return b.problems.map(String).join("; ");
-    if (typeof b.error === "string") return b.error;
   }
   if (typeof body === "string" && body.trim()) return body.trim().slice(0, 300);
   return `request failed (${status})`;

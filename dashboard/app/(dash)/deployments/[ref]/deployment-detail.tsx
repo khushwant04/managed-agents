@@ -5,7 +5,7 @@ import { useState } from "react";
 import { ConfirmDialog } from "@/components/dialog";
 import { CopyButton, Empty, ErrorBanner, JsonBlock, Loading, PageHead, StatusBadge, Time } from "@/components/ui";
 import { useApi, useMutation } from "@/components/use-api";
-import type { Deployment } from "@/lib/api";
+import type { Deployment, DeploymentUpdate } from "@/lib/api";
 import { api, seg } from "@/lib/client";
 import { describeTrigger } from "../triggers";
 
@@ -17,7 +17,8 @@ export function DeploymentDetail({ deploymentRef }: { deploymentRef: string }) {
 
   async function setStatus() {
     if (!confirming) return;
-    const updated = await mutation.run(() => api<Deployment>(path, { method: "PATCH", json: { status: confirming } }));
+    const change: DeploymentUpdate = { status: confirming };
+    const updated = await mutation.run(() => api<Deployment>(path, { method: "PATCH", json: change }));
     if (updated) {
       setData(updated);
       setConfirming(null);

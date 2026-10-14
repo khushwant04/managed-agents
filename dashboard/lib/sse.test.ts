@@ -62,7 +62,7 @@ describe("eventFromMessage", () => {
 
   it("falls back to the SSE event name and id", () => {
     const ev = eventFromMessage({ event: "session.status", data: '{"payload":{"status":"idle"}}', id: "9" });
-    expect(ev).toMatchObject({ seq: 9, type: "session.status", payload: { status: "idle" } });
+    expect(ev).toEqual({ id: "seq_9", session_id: "", run_id: null, seq: 9, type: "session.status", ts: "", model: null, payload: { status: "idle" } });
   });
 
   it("rejects bad JSON and unknown types", () => {
