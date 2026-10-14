@@ -1,0 +1,513 @@
+{
+ "name": "5xx spike on service-api",
+ "alert": "PagerDuty: service-api 5xx rate above 5% for 10 minutes (09:13-09:23 UTC)",
+ "now": "2026-10-14T09:25:00Z",
+ "deploys": [
+  {
+   "id": "deploy-4815",
+   "service": "service-api",
+   "version": "v2.31.0",
+   "at": "2026-10-14T08:02:11Z",
+   "author": "maria",
+   "summary": "Bump logging library"
+  },
+  {
+   "id": "deploy-4821",
+   "service": "checkout-api",
+   "version": "v5.8.0",
+   "at": "2026-10-14T09:12:40Z",
+   "author": "dev-bot",
+   "summary": "Refactor discount resolution; make promo lookup lazy"
+  },
+  {
+   "id": "deploy-4822",
+   "service": "search",
+   "version": "v1.4.2",
+   "at": "2026-10-14T09:18:03Z",
+   "author": "li",
+   "summary": "Tune ranking weights"
+  }
+ ],
+ "metrics": [
+  {
+   "ts": "2026-10-14T09:00:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.46,
+   "p99_ms": 174,
+   "rps": 1200
+  },
+  {
+   "ts": "2026-10-14T09:01:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.53,
+   "p99_ms": 172,
+   "rps": 1218
+  },
+  {
+   "ts": "2026-10-14T09:02:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.42,
+   "p99_ms": 188,
+   "rps": 1157
+  },
+  {
+   "ts": "2026-10-14T09:03:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.58,
+   "p99_ms": 176,
+   "rps": 1154
+  },
+  {
+   "ts": "2026-10-14T09:04:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.42,
+   "p99_ms": 183,
+   "rps": 1158
+  },
+  {
+   "ts": "2026-10-14T09:05:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.45,
+   "p99_ms": 187,
+   "rps": 1204
+  },
+  {
+   "ts": "2026-10-14T09:06:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.41,
+   "p99_ms": 188,
+   "rps": 1165
+  },
+  {
+   "ts": "2026-10-14T09:07:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.59,
+   "p99_ms": 190,
+   "rps": 1230
+  },
+  {
+   "ts": "2026-10-14T09:08:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.52,
+   "p99_ms": 171,
+   "rps": 1223
+  },
+  {
+   "ts": "2026-10-14T09:09:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.52,
+   "p99_ms": 171,
+   "rps": 1178
+  },
+  {
+   "ts": "2026-10-14T09:10:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.41,
+   "p99_ms": 174,
+   "rps": 1187
+  },
+  {
+   "ts": "2026-10-14T09:11:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.48,
+   "p99_ms": 187,
+   "rps": 1165
+  },
+  {
+   "ts": "2026-10-14T09:12:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.51,
+   "p99_ms": 187,
+   "rps": 1237
+  },
+  {
+   "ts": "2026-10-14T09:13:00Z",
+   "service": "service-api",
+   "error_rate_pct": 8.66,
+   "p99_ms": 1033,
+   "rps": 1174
+  },
+  {
+   "ts": "2026-10-14T09:14:00Z",
+   "service": "service-api",
+   "error_rate_pct": 8.6,
+   "p99_ms": 886,
+   "rps": 1222
+  },
+  {
+   "ts": "2026-10-14T09:15:00Z",
+   "service": "service-api",
+   "error_rate_pct": 7.91,
+   "p99_ms": 1044,
+   "rps": 1218
+  },
+  {
+   "ts": "2026-10-14T09:16:00Z",
+   "service": "service-api",
+   "error_rate_pct": 8.13,
+   "p99_ms": 1019,
+   "rps": 1208
+  },
+  {
+   "ts": "2026-10-14T09:17:00Z",
+   "service": "service-api",
+   "error_rate_pct": 8.0,
+   "p99_ms": 916,
+   "rps": 1239
+  },
+  {
+   "ts": "2026-10-14T09:18:00Z",
+   "service": "service-api",
+   "error_rate_pct": 7.66,
+   "p99_ms": 946,
+   "rps": 1217
+  },
+  {
+   "ts": "2026-10-14T09:19:00Z",
+   "service": "service-api",
+   "error_rate_pct": 8.19,
+   "p99_ms": 984,
+   "rps": 1186
+  },
+  {
+   "ts": "2026-10-14T09:20:00Z",
+   "service": "service-api",
+   "error_rate_pct": 7.65,
+   "p99_ms": 1001,
+   "rps": 1203
+  },
+  {
+   "ts": "2026-10-14T09:21:00Z",
+   "service": "service-api",
+   "error_rate_pct": 8.18,
+   "p99_ms": 995,
+   "rps": 1203
+  },
+  {
+   "ts": "2026-10-14T09:22:00Z",
+   "service": "service-api",
+   "error_rate_pct": 8.84,
+   "p99_ms": 1065,
+   "rps": 1221
+  },
+  {
+   "ts": "2026-10-14T09:23:00Z",
+   "service": "service-api",
+   "error_rate_pct": 9.25,
+   "p99_ms": 950,
+   "rps": 1193
+  },
+  {
+   "ts": "2026-10-14T09:24:00Z",
+   "service": "service-api",
+   "error_rate_pct": 8.69,
+   "p99_ms": 1018,
+   "rps": 1208
+  },
+  {
+   "ts": "2026-10-14T09:25:00Z",
+   "service": "service-api",
+   "error_rate_pct": 7.69,
+   "p99_ms": 939,
+   "rps": 1210
+  },
+  {
+   "ts": "2026-10-14T09:26:00Z",
+   "service": "service-api",
+   "error_rate_pct": 7.63,
+   "p99_ms": 1057,
+   "rps": 1239
+  },
+  {
+   "ts": "2026-10-14T09:27:00Z",
+   "service": "service-api",
+   "error_rate_pct": 8.66,
+   "p99_ms": 1044,
+   "rps": 1207
+  },
+  {
+   "ts": "2026-10-14T09:28:00Z",
+   "service": "service-api",
+   "error_rate_pct": 8.27,
+   "p99_ms": 1041,
+   "rps": 1194
+  },
+  {
+   "ts": "2026-10-14T09:29:00Z",
+   "service": "service-api",
+   "error_rate_pct": 8.42,
+   "p99_ms": 913,
+   "rps": 1228
+  },
+  {
+   "ts": "2026-10-14T09:30:00Z",
+   "service": "service-api",
+   "error_rate_pct": 7.62,
+   "p99_ms": 1066,
+   "rps": 1186
+  },
+  {
+   "ts": "2026-10-14T09:31:00Z",
+   "service": "service-api",
+   "error_rate_pct": 8.0,
+   "p99_ms": 970,
+   "rps": 1213
+  },
+  {
+   "ts": "2026-10-14T09:32:00Z",
+   "service": "service-api",
+   "error_rate_pct": 8.4,
+   "p99_ms": 1010,
+   "rps": 1185
+  },
+  {
+   "ts": "2026-10-14T09:33:00Z",
+   "service": "service-api",
+   "error_rate_pct": 9.14,
+   "p99_ms": 1010,
+   "rps": 1185
+  },
+  {
+   "ts": "2026-10-14T09:34:00Z",
+   "service": "service-api",
+   "error_rate_pct": 9.47,
+   "p99_ms": 1044,
+   "rps": 1198
+  },
+  {
+   "ts": "2026-10-14T09:35:00Z",
+   "service": "service-api",
+   "error_rate_pct": 7.8,
+   "p99_ms": 915,
+   "rps": 1169
+  },
+  {
+   "ts": "2026-10-14T09:36:00Z",
+   "service": "service-api",
+   "error_rate_pct": 7.97,
+   "p99_ms": 994,
+   "rps": 1225
+  },
+  {
+   "ts": "2026-10-14T09:37:00Z",
+   "service": "service-api",
+   "error_rate_pct": 8.06,
+   "p99_ms": 907,
+   "rps": 1203
+  },
+  {
+   "ts": "2026-10-14T09:38:00Z",
+   "service": "service-api",
+   "error_rate_pct": 8.72,
+   "p99_ms": 951,
+   "rps": 1166
+  },
+  {
+   "ts": "2026-10-14T09:39:00Z",
+   "service": "service-api",
+   "error_rate_pct": 8.53,
+   "p99_ms": 1028,
+   "rps": 1233
+  },
+  {
+   "ts": "2026-10-14T09:40:00Z",
+   "service": "service-api",
+   "error_rate_pct": 7.61,
+   "p99_ms": 1069,
+   "rps": 1237
+  },
+  {
+   "ts": "2026-10-14T09:41:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1200
+  },
+  {
+   "ts": "2026-10-14T09:42:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1200
+  },
+  {
+   "ts": "2026-10-14T09:43:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1231
+  },
+  {
+   "ts": "2026-10-14T09:44:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1174
+  },
+  {
+   "ts": "2026-10-14T09:45:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1176
+  },
+  {
+   "ts": "2026-10-14T09:46:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1164
+  },
+  {
+   "ts": "2026-10-14T09:47:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1156
+  },
+  {
+   "ts": "2026-10-14T09:48:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1222
+  },
+  {
+   "ts": "2026-10-14T09:49:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1162
+  },
+  {
+   "ts": "2026-10-14T09:50:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1228
+  },
+  {
+   "ts": "2026-10-14T09:51:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1176
+  },
+  {
+   "ts": "2026-10-14T09:52:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1169
+  },
+  {
+   "ts": "2026-10-14T09:53:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1194
+  },
+  {
+   "ts": "2026-10-14T09:54:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1210
+  },
+  {
+   "ts": "2026-10-14T09:55:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1212
+  },
+  {
+   "ts": "2026-10-14T09:56:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1209
+  },
+  {
+   "ts": "2026-10-14T09:57:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1189
+  },
+  {
+   "ts": "2026-10-14T09:58:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1163
+  },
+  {
+   "ts": "2026-10-14T09:59:00Z",
+   "service": "service-api",
+   "error_rate_pct": 0.6,
+   "p99_ms": 210,
+   "rps": 1244
+  }
+ ],
+ "logs": [
+  {
+   "ts": "2026-10-14T09:13:02Z",
+   "service": "checkout-api",
+   "level": "ERROR",
+   "message": "NullPointerException at DiscountResolver.resolve(DiscountResolver.java:88): promo is null",
+   "trace_id": "a1f3"
+  },
+  {
+   "ts": "2026-10-14T09:13:02Z",
+   "service": "service-api",
+   "level": "ERROR",
+   "message": "upstream checkout-api returned 500 for POST /v1/cart/price",
+   "trace_id": "a1f3"
+  },
+  {
+   "ts": "2026-10-14T09:14:40Z",
+   "service": "checkout-api",
+   "level": "ERROR",
+   "message": "NullPointerException at DiscountResolver.resolve(DiscountResolver.java:88): promo is null",
+   "trace_id": "b7c2"
+  },
+  {
+   "ts": "2026-10-14T09:14:40Z",
+   "service": "service-api",
+   "level": "ERROR",
+   "message": "upstream checkout-api returned 500 for POST /v1/cart/price",
+   "trace_id": "b7c2"
+  },
+  {
+   "ts": "2026-10-14T09:16:11Z",
+   "service": "search",
+   "level": "WARN",
+   "message": "slow query 310ms on index products-v7",
+   "trace_id": "c9d0"
+  },
+  {
+   "ts": "2026-10-14T09:19:55Z",
+   "service": "service-api",
+   "level": "ERROR",
+   "message": "upstream checkout-api returned 500 for POST /v1/cart/price",
+   "trace_id": "d4e8"
+  },
+  {
+   "ts": "2026-10-14T09:20:12Z",
+   "service": "service-api",
+   "level": "INFO",
+   "message": "health check ok",
+   "trace_id": null
+  }
+ ],
+ "expected": {
+  "deploy": "deploy-4821",
+  "service": "checkout-api",
+  "keywords": [
+   "NullPointerException",
+   "DiscountResolver",
+   "rollback"
+  ]
+ }
+}

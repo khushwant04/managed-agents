@@ -30,7 +30,9 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
-testpaths = ["packages/agents/tests", "packages/agents-server/tests", "packages/agents-cli/tests"]
+testpaths = ["packages/agents/tests", "packages/agents-server/tests", "packages/agents-cli/tests", "examples"]
+markers = ["live: calls real model APIs (needs ANTHROPIC_API_KEY / OPENAI_API_KEY)"]
+addopts = "-m 'not live'"
 
 [tool.ruff]
 line-length = 100
@@ -48,3 +50,4 @@ extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Header"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["ASYNC110", "ASYNC230", "ASYNC251"]
+"examples/**" = ["ASYNC230", "ASYNC240"]
