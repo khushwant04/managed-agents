@@ -87,7 +87,7 @@ class Platform:
                 continue
             window = budget.get("window", "30 days")
             used = await self.pool.fetchval(
-                f"SELECT coalesce(sum(input_tokens + output_tokens), 0) FROM usage_records WHERE {column} = $1 AND at > now() - $2::interval",
+                f"SELECT coalesce(sum(input_tokens + output_tokens), 0) FROM usage_records WHERE {column} = $1 AND at > now() - $2::text::interval",
                 value, window,
             )  # fmt: skip
             if used >= max_tokens:
