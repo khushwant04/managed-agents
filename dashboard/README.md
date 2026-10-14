@@ -1,41 +1,72 @@
 # Managed Agents dashboard
 
-A small Next.js (App Router) app for operating a Managed Agents server. It covers agents, versions and aliases, deployments, session timelines with live streaming and replay, usage, and the audit log. It talks to the REST API ([`docs/api/rest.md`](../docs/api/rest.md), [`openapi.json`](../docs/api/openapi.json)) and has no other backend.
+The web console for a Managed Agents server, in the style of the Claude Console and the OpenAI platform. Use it to register and version agents, try them in a playground, deploy them behind HTTP, webhooks, cron and queues, follow sessions live, and keep an eye on usage, keys and audit logs. It talks only to the REST API ([`docs/api/rest.md`](../docs/api/rest.md), [`openapi.json`](../docs/api/openapi.json)).
 
-![Session timeline](docs/session-timeline.png)
+![Dashboard home](docs/dashboard.png)
+
+It is a Next.js 16 App Router app scaffolded with `npx shadcn@latest init --preset b0 --template next`: shadcn/ui on [Base UI](https://base-ui.com), Tailwind CSS v4, `next-themes`, [Motion](https://motion.dev) and Recharts.
 
 ## Pages
 
 | Page | What it does |
 | --- | --- |
-| **Sign in** | Paste a project API key. The key is checked with `GET /v1/project`. The server is `AGENTS_API_URL`, or another server from `AGENTS_API_URL_ALLOWLIST` when that is set. |
-| **Agents** | Searches agents (`GET /v1/agents?q=`). |
-| **Agent detail** | Versions table, showing which aliases serve each version and how much traffic each gets. Aliases with a weight bar. View a version's spec JSON. **Promote** a version to an alias, set a **canary split** (stable version, canary version and percent), and **roll back** an alias. Every alias move goes through a confirm dialog that shows the target before and after. |
-| **Deployments** | Lists deployments. The detail view shows triggers (cron, webhook, queue, http), concurrency, status, budget, secrets, and the webhook URL with a copy button. **Pause** and **Resume** use `PATCH {status}` with a confirm dialog. |
-| **Sessions** | Lists sessions, filterable by agent and limit. Links to parent and child sessions. |
-| **Session timeline** | Loads history from `GET /v1/sessions/{id}/events`, then follows `GET /v1/sessions/{id}/stream?after=<last seq>` over SSE, reconnecting with backoff from the last seq. It renders route, status and run events, user messages, and agent text (deltas joined into one message per run turn, with thinking collapsible). It also shows tool calls with their results (collapsible, errors highlighted), approvals with **Approve / Deny** and an optional reason, subagent links, artifacts with download links, and per-run usage. There is a message box (`message.user`) and **Interrupt**. |
-| **Replay** | For a settled session: step, scrub, play and pause through the recorded events at 0.5× to 16×. Gaps come from the recorded timestamps; idle gaps longer than 1.5s are compressed. |
-| **Usage** | `GET /v1/usage?days=`: totals, a stacked inline-SVG bar chart of input and output tokens per day, and a table by day and model. |
-| **Audit log** | `GET /v1/audit` (admin keys only). Other keys get a friendly "Admins only" message instead of an error. |
+| **Sign in** | Paste a project API key; it is checked with `GET /v1/project`. The server is `AGENTS_API_URL`, or one picked from `AGENTS_API_URL_ALLOWLIST`. |
+| **Dashboard** | Greeting, sessions this week, token volume and prompt-cache share with count-up numbers, a 7/30-day token chart, the latest agents as artwork cards, recent sessions and quick starts. |
+| **API keys** | Create keys (shown once), list and revoke them (from the audit log), and copy cURL, Python and TypeScript snippets for this server. |
+| **Playground** | Pick an agent and alias, write the input and run it with Ctrl/⌘+Enter; output streams in over SSE with tool calls and token usage. **Code** shows the same request as cURL, Python or TypeScript. Six templates register a starter agent in one click. |
+| **Agents** | Grid or table, with search. Register an agent from a JSON spec; validation problems show inline. |
+| **Agent detail** | Overview (models, instructions, tools, limits, alias traffic), versions with each spec, aliases with weight bars, and **promote**, **canary split** and **rollback** dialogs that preview the change. |
+| **Skills** | Skill bundles; upload a `.zip` or `.tar.gz` by drag and drop. Zips are repacked into the tar.gz the server expects. |
+| **Environments** | Sandbox environments (E2B, Docker, local) with limits, internet access and allowed hosts; create and edit. |
+| **Deployments** | Trigger chips (cron in plain English), a create dialog with a trigger builder, environment, secrets and budget. The detail page has pause/resume, delete, invoke now, a sync/async/stream cURL block and recent sessions. |
+| **Webhooks** | Every webhook endpoint with its URL. **Add webhook endpoint** creates a webhook deployment and reveals its URL and signing secret once. A per-provider "How signing works" card covers GitHub, Slack, Stripe and generic. |
+| **Secrets** | Write-only secrets: add, rotate, delete. |
+| **Sessions** | Filter by agent, status and id (kept in the URL), auto-refresh, subagent and deployment links. |
+| **Session** | The live trace. History is loaded from `/events`, then `/stream?after=<seq>` is followed over SSE with reconnect. The timeline shows messages, thinking, tool calls with arguments, results and durations, approvals with **Approve / Deny**, subagents, artifacts, errors and per-run usage. A side panel has details, artifacts and raw events. There is a composer for steering, plus **Interrupt**, **Terminate** and **Replay** (step, scrub, 0.5×–16×). |
+| **Usage** | 7/30/90 days and a model filter: totals, stacked tokens per day, runs and tool calls, a per-model breakdown and CSV export. |
+| **Logs** | The audit log with actions coloured by verb, expandable details, filters and live refresh (admin keys). |
+| **Settings** | General project details, appearance (system, light, dark), the project policy editor with a key reference (admins), and sign-out. |
 
 <p>
-  <img src="docs/agent-detail.png" alt="Agent detail with aliases, canary split and versions" width="49%">
-  <img src="docs/session-replay.png" alt="Replay controls on a finished session" width="49%">
+  <img src="docs/session-timeline.png" alt="Live session trace with the side panel" width="49%">
+  <img src="docs/playground.png" alt="Playground after a run" width="49%">
 </p>
+<p>
+  <img src="docs/agent-detail.png" alt="Agent detail with alias traffic" width="49%">
+  <img src="docs/usage.png" alt="Usage with stacked token chart" width="49%">
+</p>
+
+## Design
+
+- **Theme.** `app/globals.css` keeps the neutral oklch tokens from the shadcn `neutral` base colour for `:root` and `.dark` (radius `0.625rem`; the dark sidebar accent is `oklch(0.488 0.243 264.376)`). Next to them are easing curves (`--ease-out-quint`, `--ease-spring`), depth (`shadow-card`, `shadow-elevated`, `shadow-dialog`) and three status hues (`success`, `warning`, `info`) for badges and timeline markers.
+- **Motion.** The shadcn primitives in `components/ui` are tuned for motion:
+  - menus, popovers, selects and dialogs ease in from a slight offset;
+  - tabs slide their indicator;
+  - buttons press-scale;
+  - switches spring;
+  - skeletons shimmer;
+  - the sidebar collapses on an ease-out curve.
+
+  Pages fade in through `app/(console)/template.tsx`. `components/motion.tsx` has `FadeIn`, `Stagger`, `AnimatedNumber` and `Expand`. The sidebar's active item is a pill that glides between links, and theme switches reveal as a circle from the click (View Transitions). Everything honours `prefers-reduced-motion`.
+- **Shell.** An inset sidebar collapses to icons (Ctrl/⌘+B). It has a project switcher, Ctrl/⌘+K search across pages, agents and actions, breadcrumbs, a theme switch, and a footer with docs and the signed-in key.
+
+![Dark mode](docs/dashboard-dark.png)
 
 ## How auth works
 
 The browser never sees the API key.
 
-1. `POST /api/auth/signin` (a route handler) validates the key against `GET {upstream}/v1/project`. It then stores the key in an **httpOnly, SameSite=Strict** cookie, which is `Secure` when the request came over HTTPS (`X-Forwarded-Proto` is honoured). The project name and role go in a second cookie for the header.
-2. Pages call only `/api/proxy/v1/...`. The proxy route adds `Authorization: Bearer <key>` and forwards to the upstream:
-   - Only `/v1/...` paths are proxied. Dot segments and anything else get a 404.
-   - Only a short allowlist of request headers is forwarded (`accept`, `content-type`, `last-event-id`, `if-none-match`), and the same goes for response headers.
-   - Non-GET requests must be same-origin (`Origin` must match the host), on top of SameSite cookies.
-   - Bodies are **streamed, not buffered**. For `text/event-stream` the proxy sets `Cache-Control: no-cache, no-transform` (which keeps Next's gzip from buffering) and `X-Accel-Buffering: no`. It also sends an SSE comment first, because Next only flushes response headers with the first body chunk and a quiet stream would otherwise wait for the server's 15s keepalive. When the browser disconnects, the upstream request is aborted.
-3. A 401 from the proxy sends the browser back to `/signin?expired=1`.
+1. **Sign in.** `POST /api/auth/signin` validates the key against `GET {upstream}/v1/project`.
+   - The key is stored in an **httpOnly, SameSite=Strict** cookie, `Secure` over HTTPS (`X-Forwarded-Proto` is honoured).
+   - The project name and role go in a second cookie for the shell.
+2. **Proxy.** Pages call only `/api/proxy/v1/...`, which adds `Authorization: Bearer <key>` and forwards to the upstream.
+   - Only `/v1/...` paths are proxied.
+   - A short header allowlist applies in both directions.
+   - Non-GET requests must be same-origin.
+   - Bodies are streamed. For SSE the proxy disables buffering and sends a comment first so headers flush immediately.
+3. **Expiry.** A 401 sends the browser back to `/signin?expired=1`.
 
-The upstream can only ever be `AGENTS_API_URL` or an entry in `AGENTS_API_URL_ALLOWLIST`. The proxy re-checks this on every request, so the dashboard can't be pointed at arbitrary hosts.
+The upstream can only be `AGENTS_API_URL` or an entry in `AGENTS_API_URL_ALLOWLIST`, re-checked on every request.
 
 ## Configuration
 
@@ -43,7 +74,7 @@ The upstream can only ever be `AGENTS_API_URL` or an entry in `AGENTS_API_URL_AL
 | --- | --- | --- |
 | `AGENTS_API_URL` | `http://localhost:8080` | The Managed Agents API to proxy to. |
 | `AGENTS_API_URL_ALLOWLIST` | (empty) | Comma-separated extra API URLs offered at sign-in. |
-| `DASHBOARD_INSECURE_COOKIES` | (unset) | `1` drops the cookie `Secure` flag even over HTTPS. Use it only when debugging behind a proxy that doesn't send `X-Forwarded-Proto`. |
+| `DASHBOARD_INSECURE_COOKIES` | (unset) | `1` drops the cookie `Secure` flag even over HTTPS; only for debugging behind a proxy without `X-Forwarded-Proto`. |
 | `PORT` / `HOSTNAME` | `3000` / `0.0.0.0` (image) | Where the standalone server listens. |
 
 ## Development
@@ -53,19 +84,26 @@ Node 22.12 or later.
 ```bash
 cd dashboard
 npm install
-npm run generate      # lib/api-types.ts from ../docs/api/openapi.json (openapi-typescript)
 npm run dev           # http://localhost:3000, AGENTS_API_URL=http://localhost:8080 by default
 ```
 
 | Script | |
 | --- | --- |
-| `npm run generate` | Regenerate `lib/api-types.ts` after the OpenAPI spec changes. The file is committed, so builds don't need the spec. |
-| `npm run lint` | ESLint (flat config, `eslint-config-next` core-web-vitals + TypeScript). |
+| `npm run generate` | Regenerate `lib/api-types.ts` from `../docs/api/openapi.json` (committed, so builds don't need the spec). |
+| `npm run lint` | ESLint (`eslint-config-next` core-web-vitals + TypeScript, including the React compiler rules). |
 | `npm run typecheck` | `tsc --noEmit`. |
 | `npm test` | Vitest unit tests for the pure logic in `lib/`. |
-| `npm run build` / `npm start` | Production build (`output: "standalone"`) and server. |
+| `npm run build` | Production build (`output: "standalone"`). |
+| `npm run format` | Prettier with the Tailwind plugin. |
 
-To try it without real model keys, start a server with a scripted model. `packages/agents-server/tests/test_api.py` shows how to wire `Services` + `create_app` + a worker with `ScriptedAdapter` against a throwaway Postgres. Then bootstrap an admin key and sign in with it.
+Add shadcn components with `npx shadcn@latest add <name>`. They land in `components/ui` and use Base UI, so compose them with the `render` prop rather than `asChild`.
+
+To try it without model keys, run the throwaway server the TypeScript integration tests use. It starts its own Postgres, bootstraps the key `ak_it_admin` and registers a model `scripted` that answers "pong":
+
+```bash
+.venv/bin/python typescript/scripts/it-server.py --port 8765 &
+AGENTS_API_URL=http://127.0.0.1:8765 npm --prefix dashboard run dev
+```
 
 ### Layout
 
@@ -73,31 +111,25 @@ To try it without real model keys, start a server with a scripted model. `packag
 app/
   api/auth/{signin,signout}/route.ts   cookie session
   api/proxy/[...path]/route.ts         authenticated, streaming proxy to the API
-  signin/                              sign-in form
-  (dash)/                              signed-in shell (redirects to /signin without a session)
-    agents/ deployments/ sessions/ usage/ audit/
-    sessions/[id]/use-session-events.ts  history + SSE follow with reconnect
-components/                            UI primitives, <dialog>-based modals, useApi hook
+  signin/                              sign-in page
+  (console)/                           signed-in console (redirects to /signin without a session)
+    layout.tsx template.tsx            shell and page transitions
+    page.tsx home-view.tsx             dashboard home
+    agents/ playground/ skills/ environments/ deployments/ webhooks/ secrets/
+    sessions/ usage/ logs/ api-keys/ settings/
+components/
+  ui/          shadcn components (base-nova), tuned for motion
+  shell/       sidebar, command menu, header, project context
+  agents/ playground/ session/ deploy/ analytics/ settings/   per-area components
+  motion.tsx page.tsx states.tsx status-badge.tsx code-block.tsx copy-button.tsx agent-art.tsx …
+hooks/         useApi/useMutation, useIsMobile, useHydrated/useNow
 lib/
-  api-types.ts    generated from the OpenAPI spec (do not edit)
-  api.ts          named aliases for the generated schema types
-  sse.ts          incremental SSE parser (+ tests)
-  timeline.ts     event log → timeline view model reducer (+ tests)
-  replay.ts       replay cursor/speed/timing reducer (+ tests)
-  alias.ts        promote / canary split / validation helpers (+ tests)
-  usage.ts        per-day rollups and axis helpers (+ tests)
-  proxy.ts        upstream allowlist, path mapping, header filtering, origin check (+ tests)
-  client.ts       browser fetch helper (through the proxy) and error messages
+  api-types.ts generated from the OpenAPI spec (do not edit); api.ts names its types
+  client.ts    browser fetch helper (through the proxy) and error messages
+  proxy.ts     upstream allowlist, path mapping, header filtering, origin check
+  sse.ts timeline.ts replay.ts alias.ts usage.ts session-view.ts usage-report.ts
+  cron.ts triggers.ts skill-bundle.ts keys.ts policy.ts format.ts   pure, unit-tested logic
 ```
-
-The timeline reducer, `lib/timeline.ts`, works like this:
-
-- Deltas are joined per run until `message.agent.done` (its text wins) or a tool call.
-- Tool calls and results are matched by call id, as are approval requests and decisions, and subagent starts and finishes by child session.
-- Events at or below the last applied `seq` are dropped, so history and the live stream can overlap safely.
-- `applyEvent` is immutable (React state) and `buildTimeline` folds a whole log with a mutable draft.
-
-Replay steps forward incrementally and rebuilds only when seeking backwards.
 
 ## Docker
 
@@ -106,19 +138,12 @@ docker build -t managed-agents-dashboard dashboard
 docker run --rm -p 3000:3000 -e AGENTS_API_URL=http://gateway:8080 managed-agents-dashboard
 ```
 
-The image runs `node server.js` from Next's standalone output as the unprivileged `node` user. Put it behind your ingress with TLS, and with long read timeouts so session streams stay open.
+The image runs `node server.js` from Next's standalone output as the unprivileged `node` user. Put it behind your ingress with TLS and long read timeouts so session streams stay open. The build downloads the Inter and Geist Mono fonts through `next/font`, so it needs network access.
 
-## Theming and accessibility
+## Accessibility
 
-There is one global stylesheet (`app/globals.css`) using CSS variables, with light and dark themes chosen by `prefers-color-scheme`:
-
-![Dark mode](docs/session-timeline-dark.png)
-
-Accessibility features:
-
-- Semantic tables, labelled form controls and visible focus rings.
-- A skip link, and native `<dialog>` for modals (focus trap and Escape handled by the browser).
-- `aria-live` for the connection state and notices.
-- `prefers-reduced-motion` is respected.
-
-The chart's two series colours were checked for colour-blind separation and contrast in both themes. The chart has a legend and a keyboard-focusable per-day readout, and the same data is in a table under the chart. Layouts reflow down to phone width.
+- Base UI primitives give dialogs, menus, selects and tabs their focus management and ARIA.
+- There is a skip link, visible focus rings and labelled controls.
+- The theme follows the system unless you choose light or dark.
+- Animations are disabled under `prefers-reduced-motion`.
+- Layouts reflow to phone width; tables scroll inside their cards.

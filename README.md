@@ -97,9 +97,9 @@ const session = await new Client().invoke('incident-investigator@prod', { input:
 for await (const ev of session.events()) if (ev.type === 'message.agent.delta') process.stdout.write(ev.text);
 ```
 
-**Watch it** in the dashboard (`cd dashboard && npm install && npm run dev`, then sign in with your API key):
+**Watch it** in the dashboard (`cd dashboard && npm install && npm run dev`, then sign in with your API key): a console in the style of the Claude Console with a playground, live session traces, deployments, webhooks and usage.
 
-![Session timeline in the dashboard](dashboard/docs/session-timeline.png)
+![The dashboard](dashboard/docs/dashboard.png)
 
 ## The demo
 
@@ -113,7 +113,7 @@ for await (const ev of session.events()) if (ev.type === 'message.agent.delta') 
 | `packages/agents-server` | Gateway (FastAPI), registry, router, run queue, workers, scheduler, secrets, metrics; the `agents-server` command |
 | `packages/agents-cli` | The `agents` command: `run`, `dev`, `apply`, `deploy`, `promote`, `rollback`, `invoke`, `sessions`, `secrets` |
 | `typescript/` | `@managed-agents/client` (types generated from the OpenAPI spec) and `@managed-agents/react` hooks |
-| `dashboard/` | Next.js dashboard: agents, versions and aliases, deployments, live session timelines with approvals and replay, usage, audit |
+| `dashboard/` | Next.js + shadcn/ui console: playground, agents, versions and aliases, deployments and webhooks, live session traces with approvals and replay, usage, keys, audit |
 | `examples/incident-investigator` | The flagship demo, its tools service and the benchmark |
 | `docker-compose.yml`, `Dockerfile`, `deploy/compose` | Local stack and server image |
 | `deploy/helm`, `deploy/grafana` | Helm chart (HPA gateway, KEDA-scaled workers) and Grafana dashboard |
