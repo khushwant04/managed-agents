@@ -1,8 +1,6 @@
 <div align="center">
 
-# Runhive
-
-**Run your hive of agents.**
+<img src="docs/assets/banner.png" alt="Runhive: run your hive of agents" width="100%">
 
 A self-hosted platform to register, route, host and observe AI agents on Claude and OpenAI models, with every session in its own sandbox.
 
