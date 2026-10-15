@@ -1,11 +1,12 @@
-# Local stack: Postgres, MinIO, migrations, gateway, worker(s) and scheduler.
+# Local stack: Postgres, MinIO, migrations, gateway, worker(s), scheduler and dashboard.
 #
 #   cp deploy/compose/.env.example .env      # optional: provider keys, overrides
 #   docker compose up --build                # or: make dev
 #   docker compose up --scale worker=3       # more workers
 #
-#   API:   http://localhost:8080   (admin key: $RUNHIVE_BOOTSTRAP_KEY, default ak_dev_admin)
-#   MinIO: http://localhost:9001   (console; minioadmin / minioadmin)
+#   API:       http://localhost:8080   (admin key: $RUNHIVE_BOOTSTRAP_KEY, default ak_dev_admin)
+#   Dashboard: http://localhost:3000   (sign in with the same key)
+#   MinIO:     http://localhost:9001   (console; minioadmin / minioadmin)
 #
 # Sandboxes
 #   The default sandbox provider is E2B (RUNHIVE_SANDBOX_PROVIDER=e2b, needs E2B_API_KEY).
@@ -159,17 +160,19 @@ services:
       gateway:
         condition: service_healthy
 
-  # dashboard:
-  #   # Next.js dashboard (to be added). Talks to the gateway's public API.
-  #   build:
-  #     context: ./dashboard
-  #   environment:
-  #     RUNHIVE_API_URL: http://gateway:8080
-  #   ports:
-  #     - "${DASHBOARD_PORT:-3000}:3000"
-  #   depends_on:
-  #     gateway:
-  #       condition: service_healthy
+  dashboard:
+    # Next.js console. Proxies to the gateway; the API key stays in an httpOnly cookie.
+    image: ${RUNHIVE_DASHBOARD_IMAGE:-runhive-dashboard:dev}
+    build:
+      context: ./dashboard
+    environment:
+      RUNHIVE_API_URL: http://gateway:8080
+    ports:
+      - "${DASHBOARD_PORT:-3000}:3000"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   postgres-data:

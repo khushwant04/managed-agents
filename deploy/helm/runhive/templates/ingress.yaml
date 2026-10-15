@@ -51,4 +51,16 @@ spec:
                   name: http
           {{- end }}
     {{- end }}
+    {{- if and $.Values.dashboard.enabled $.Values.dashboard.ingress.host }}
+    - host: {{ $.Values.dashboard.ingress.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "runhive.componentName" (dict "root" $ "component" "dashboard") }}
+                port:
+                  name: http
+    {{- end }}
 {{- end }}

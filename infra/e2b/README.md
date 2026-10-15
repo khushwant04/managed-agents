@@ -80,7 +80,11 @@ which is what `build_template.py` does. The CLI writes `template_id` back into
 [E2B Embed](https://github.com/e2b-dev/runtime/tree/main/embed) runs the whole E2B runtime
 (API, Firecracker orchestrator, sandbox proxy, template builder, dashboard) on one Linux host
 with KVM, with the same SDK and API as E2B Cloud. The platform needs no code change to use it,
-only two more variables next to `E2B_API_KEY`:
+only two more variables next to `E2B_API_KEY`.
+
+For a complete install on one host (Embed, the `runhive-base` template, and Runhive's API, workers
+and dashboard wired to it) use [`deploy/e2b-embed`](../../deploy/e2b-embed/README.md): `make embed-stack-up`.
+To run only Embed and point an existing Runhive at it:
 
 ```bash
 make e2b-embed-up                         # downloads embed/compose pinned to E2B_EMBED_REF, docker compose up

@@ -1,0 +1,4 @@
+# Fetched by up.sh (E2B Embed's compose.yaml and .env at the pinned ref)
+embed/
+# Generated secrets
+.env

@@ -28,3 +28,9 @@ ingress:
     - secretName: agents-tls
       hosts:
         - runhive.example.com
+        - console.runhive.example.com
+dashboard:
+  ingress:
+    host: console.runhive.example.com
+  apiUrlAllowlist:
+    - https://staging.runhive.example.com

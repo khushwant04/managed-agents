@@ -1,0 +1,77 @@
+# Runhive in Kubernetes with sandboxes on a self-hosted E2B runtime (E2B Embed).
+#
+# Embed needs a KVM host and runs on that host's network, so it stays outside the
+# cluster: start it with `make e2b-embed-up` (or deploy/e2b-embed/up.sh) on one
+# KVM machine the pods can reach, then read its team key there:
+#
+#   docker compose -p e2b --project-directory deploy/e2b-embed/embed \
+#     -f deploy/e2b-embed/embed/compose.yaml exec -T ready cat /run/e2b/sdk.env
+#
+# Build the runhive-base template on it once (from a machine that reaches
+# Embed's :3000 and :5008, e.g. the Embed host itself):
+#
+#   E2B_API_KEY=... E2B_API_URL=http://127.0.0.1:3000 E2B_SANDBOX_URL=http://127.0.0.1:3002 \
+#     uv run --no-project --with 'e2b>=2' python infra/e2b/build_template.py
+#
+# Then install, keeping every credential in a Secret you manage:
+#
+#   kubectl create namespace runhive
+#   kubectl -n runhive create secret generic runhive \
+#     --from-literal=DATABASE_URL='postgresql://runhive:...@postgres.db:5432/runhive' \
+#     --from-literal=RUNHIVE_MASTER_KEY="$(head -c 32 /dev/urandom | base64)" \
+#     --from-literal=E2B_API_KEY='e2b_...' \
+#     --from-literal=ANTHROPIC_API_KEY='sk-ant-...' \
+#     --from-literal=AWS_ACCESS_KEY_ID='...' --from-literal=AWS_SECRET_ACCESS_KEY='...' \
+#     --from-literal=RUNHIVE_BOOTSTRAP_KEY="ak_$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9')"
+#   helm install runhive deploy/helm/runhive -n runhive -f deploy/helm/runhive/examples/e2b-embed-values.yaml
+#
+# Pods reach Embed directly, so restrict 3000-3002 on the Embed host to the
+# cluster's node or pod CIDR (Embed authenticates only with the team key).
+
+image:
+  repository: ghcr.io/khushwant04/runhive-server
+  # tag: 0.1.0
+
+config:
+  # Any S3-compatible bucket (MinIO, R2, S3).
+  blobUrl: s3://runhive/
+  aws:
+    region: us-east-1
+    endpointUrl: http://minio.storage.svc:9000
+  publicUrl: https://runhive.example.com
+  sandboxProvider: e2b
+  # The Embed host, as the pods see it.
+  e2b:
+    apiUrl: http://10.0.0.20:3000
+    sandboxUrl: http://10.0.0.20:3002
+
+secrets:
+  existingSecret: runhive
+
+dashboard:
+  enabled: true
+  image:
+    repository: ghcr.io/khushwant04/runhive-dashboard
+    # tag: 0.1.0
+  ingress:
+    host: console.runhive.example.com
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: runhive.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: runhive-tls
+      hosts:
+        - runhive.example.com
+        - console.runhive.example.com
+
+# Without KEDA, run a fixed number of workers.
+keda:
+  enabled: false
+worker:
+  replicaCount: 2

@@ -1,0 +1,196 @@
+# Runhive on one Linux host next to a self-hosted E2B runtime (E2B Embed).
+#
+#   ./up.sh            # starts Embed, writes .env, builds runhive-base on Embed, starts this stack
+#   ./down.sh          # stops this stack (--embed: Embed too, --purge: also volumes and host setup)
+#
+# Embed runs its services on the host network (API :3000, dashboard :3001,
+# sandbox proxy :3002, plus Postgres :5432, Redis :6379, ClickHouse :8123/:9000
+# and others on 127.0.0.1). This stack therefore keeps its own Postgres and
+# MinIO on the compose network only, publishes just the API and the dashboard,
+# and reaches Embed through the host gateway (host.docker.internal).
+#
+#   API:       http://<host>:${GATEWAY_PORT:-8080}
+#   Dashboard: http://<host>:${DASHBOARD_PORT:-3100}   (sign in with RUNHIVE_BOOTSTRAP_KEY)
+#   E2B:       http://<host>:3001                       (Embed's own dashboard)
+#
+# Every value comes from ./.env, which up.sh creates from .env.example and fills
+# with generated secrets and Embed's team API key. See README.md.
+
+name: runhive-e2b
+
+x-runhive-env: &runhive-env
+  DATABASE_URL: postgresql://runhive:${POSTGRES_PASSWORD:?run ./up.sh first (it creates .env)}@postgres:5432/runhive
+  RUNHIVE_PUBLIC_URL: ${RUNHIVE_PUBLIC_URL:-http://localhost:8080}
+  RUNHIVE_BLOB_URL: s3://runhive/
+  AWS_ENDPOINT_URL: http://minio:9000
+  AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-runhive}
+  AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:?run ./up.sh first (it creates .env)}
+  AWS_DEFAULT_REGION: us-east-1
+  RUNHIVE_MASTER_KEY: ${RUNHIVE_MASTER_KEY:?run ./up.sh first (it creates .env)}
+  RUNHIVE_SANDBOX_PROVIDER: e2b
+  RUNHIVE_WORKER_CONCURRENCY: ${RUNHIVE_WORKER_CONCURRENCY:-8}
+  RUNHIVE_LEASE_SECONDS: ${RUNHIVE_LEASE_SECONDS:-30}
+  RUNHIVE_IDLE_PAUSE_SECONDS: ${RUNHIVE_IDLE_PAUSE_SECONDS:-300}
+  RUNHIVE_RATE_LIMIT_PER_MINUTE: ${RUNHIVE_RATE_LIMIT_PER_MINUTE:-600}
+  # E2B Embed on this host, seen from inside the containers.
+  E2B_API_KEY: ${E2B_API_KEY:?run ./up.sh first (it copies Embed's team key into .env)}
+  E2B_API_URL: http://${E2B_HOST:-host.docker.internal}:3000
+  E2B_SANDBOX_URL: http://${E2B_HOST:-host.docker.internal}:3002
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+
+x-runhive-service: &runhive-service
+  image: ${RUNHIVE_IMAGE:-runhive-server:local}
+  build:
+    context: ../..
+    dockerfile: Dockerfile
+  environment: *runhive-env
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  restart: unless-stopped
+  init: true
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: runhive
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run ./up.sh first (it creates .env)}
+      POSTGRES_DB: runhive
+    # Not published: Embed already uses 5432 on this host.
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U runhive -d runhive"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  minio:
+    image: ${MINIO_IMAGE:-pgsty/minio:RELEASE.2026-08-04T00-00-00Z}
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-runhive}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?run ./up.sh first (it creates .env)}
+    # The S3 API stays on the compose network (Embed's ClickHouse holds :9000);
+    # the console is published on loopback only.
+    ports:
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9101}:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  minio-init:
+    image: ${MC_IMAGE:-pgsty/mc:RELEASE.2026-09-16T00-00-00Z}
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-runhive}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?run ./up.sh first (it creates .env)}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+        mc mb --ignore-existing local/runhive
+    restart: "no"
+
+  migrate:
+    <<: *runhive-service
+    command: ["migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: "no"
+
+  gateway:
+    <<: *runhive-service
+    command: ["serve", "--host", "0.0.0.0", "--port", "8080"]
+    environment:
+      <<: *runhive-env
+      # Creates org/project "default" with this admin key on first start.
+      RUNHIVE_BOOTSTRAP_KEY: ${RUNHIVE_BOOTSTRAP_KEY:?run ./up.sh first (it creates .env)}
+    ports:
+      - "${GATEWAY_BIND:-0.0.0.0}:${GATEWAY_PORT:-8080}:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      minio-init:
+        condition: service_completed_successfully
+
+  worker:
+    <<: *runhive-service
+    command: ["worker"]
+    # No published ports or container_name, so `--scale worker=N` works.
+    healthcheck:
+      disable: true
+    stop_grace_period: 60s
+    depends_on:
+      gateway:
+        condition: service_healthy
+
+  scheduler:
+    <<: *runhive-service
+    command: ["scheduler"]
+    healthcheck:
+      disable: true
+    depends_on:
+      gateway:
+        condition: service_healthy
+
+  dashboard:
+    image: ${RUNHIVE_DASHBOARD_IMAGE:-runhive-dashboard:local}
+    build:
+      context: ../../dashboard
+    environment:
+      RUNHIVE_API_URL: http://gateway:8080
+    # 3000-3003 and 3010 belong to Embed on this host.
+    ports:
+      - "${DASHBOARD_BIND:-0.0.0.0}:${DASHBOARD_PORT:-3100}:3000"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # --- One-shot tools (profile "tools"; up.sh runs them) ----------------------
+
+  # Builds the runhive-base sandbox template on Embed from infra/e2b/Dockerfile.
+  # Host network: template builds upload through Embed's orchestrator on
+  # 127.0.0.1:5008, which is not reachable from a bridge network.
+  template:
+    image: ${RUNHIVE_IMAGE:-runhive-server:local}
+    profiles: ["tools"]
+    network_mode: host
+    entrypoint: ["python", "/e2b/build_template.py"]
+    environment:
+      E2B_API_KEY: ${E2B_API_KEY:?run ./up.sh first (it copies Embed's team key into .env)}
+      E2B_API_URL: http://127.0.0.1:3000
+      E2B_SANDBOX_URL: http://127.0.0.1:3002
+      E2B_TEMPLATE_CPU: ${E2B_TEMPLATE_CPU:-2}
+      E2B_TEMPLATE_MEMORY_MB: ${E2B_TEMPLATE_MEMORY_MB:-2048}
+    volumes:
+      - ../../infra/e2b:/e2b:ro
+    restart: "no"
+
+  # `runhive e2b check` from the workers' point of view (same network, same env).
+  check:
+    <<: *runhive-service
+    profiles: ["tools"]
+    entrypoint: ["runhive", "e2b", "check"]
+    command: []
+    healthcheck:
+      disable: true
+    restart: "no"
+
+volumes:
+  postgres-data:
+  minio-data:

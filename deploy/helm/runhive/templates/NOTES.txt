@@ -5,6 +5,9 @@ Components:
   gateway    Deployment/{{ $gw }}{{ if .Values.gateway.autoscaling.enabled }} (HPA {{ .Values.gateway.autoscaling.minReplicas }}-{{ .Values.gateway.autoscaling.maxReplicas }} on CPU){{ end }}
   worker     Deployment/{{ include "runhive.componentName" (dict "root" . "component" "worker") }}{{ if .Values.keda.enabled }} (KEDA {{ .Values.keda.minReplicaCount }}-{{ .Values.keda.maxReplicaCount }} on queued runs){{ end }}
   scheduler  Deployment/{{ include "runhive.componentName" (dict "root" . "component" "scheduler") }}
+{{- if .Values.dashboard.enabled }}
+  dashboard  Deployment/{{ include "runhive.componentName" (dict "root" . "component" "dashboard") }}
+{{- end }}
   database   {{ if .Values.postgresql.enabled }}bundled Postgres ({{ include "runhive.postgresql.host" . }}){{ else if .Values.secrets.existingSecret }}DATABASE_URL from Secret/{{ .Values.secrets.existingSecret }}{{ else }}external (externalDatabase.url){{ end }}
   sandboxes  {{ .Values.config.sandboxProvider }}
 
@@ -16,6 +19,17 @@ Components:
 {{- else }}
      kubectl -n {{ .Release.Namespace }} port-forward svc/{{ $gw }} 8080:{{ .Values.gateway.service.port }}
      curl http://localhost:8080/healthz
+{{- end }}
+
+{{- if .Values.dashboard.enabled }}
+
+   Open the dashboard:
+{{- if and .Values.ingress.enabled .Values.dashboard.ingress.host }}
+     http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.dashboard.ingress.host }}/
+{{- else }}
+     kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "runhive.componentName" (dict "root" . "component" "dashboard") }} 3000:{{ .Values.dashboard.service.port }}
+     open http://localhost:3000 and sign in with an API key
+{{- end }}
 {{- end }}
 
 2. Get an admin API key:
@@ -31,6 +45,10 @@ Components:
 
 Workers run a fixed {{ .Values.worker.replicaCount }} replicas. Install KEDA and set keda.enabled=true to
 scale them on queue depth.
+{{- end }}
+{{- if and (eq .Values.config.sandboxProvider "e2b") .Values.config.e2b.apiUrl }}
+
+Sandboxes: self-hosted E2B at {{ .Values.config.e2b.apiUrl }} (sandbox proxy {{ .Values.config.e2b.sandboxUrl | default "NOT SET: config.e2b.sandboxUrl is required" }}).
 {{- end }}
 {{- if and (eq .Values.config.sandboxProvider "e2b") (not .Values.secrets.existingSecret) (not .Values.secrets.e2bApiKey) }}
 

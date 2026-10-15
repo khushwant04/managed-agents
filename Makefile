@@ -8,7 +8,7 @@ SANDBOX_IMAGE ?= runhive-base:latest
 HELM_CHART    ?= deploy/helm/runhive
 
 .DEFAULT_GOAL := help
-.PHONY: help install lint test test-live dev dev-docker down logs image sandbox-image openapi helm-lint e2b-template e2b-check e2b-embed-up e2b-embed-env e2b-embed-down
+.PHONY: help install lint test test-live dev dev-docker down logs image sandbox-image openapi helm-lint k8s-manifests e2b-template e2b-check e2b-embed-up e2b-embed-env e2b-embed-down embed-stack-up embed-stack-down
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -47,12 +47,17 @@ sandbox-image: ## Build the sandbox image (runhive-base:latest) for the Docker p
 e2b-template: ## Build the runhive-base E2B template (needs E2B_API_KEY; E2B_API_URL for self-hosted)
 	$(UV) run --no-project --with 'e2b>=2' python infra/e2b/build_template.py
 
+k8s-manifests: ## Regenerate deploy/kubernetes/runhive-e2b-embed.yaml from the Helm chart (example values)
+	{ cat deploy/kubernetes/header.txt; helm template runhive $(HELM_CHART) --namespace runhive \
+	    -f $(HELM_CHART)/examples/e2b-embed-values.yaml; } > deploy/kubernetes/runhive-e2b-embed.yaml
+
 e2b-check: ## Check the E2B setup end to end (E2B Cloud, or E2B_API_URL/E2B_SANDBOX_URL for self-hosted)
 	$(UV) run runhive e2b check $(E2B_CHECK_ARGS)
 
 # E2B Embed: the whole E2B runtime on this Linux host (needs KVM; see infra/e2b/README.md).
 E2B_EMBED_REF ?= 50fc41af77ff0877d4224e5e4ded5e7f308b5476
-E2B_EMBED_DIR ?= .e2b-embed
+# Shared with deploy/e2b-embed/up.sh, so both use the same Embed install.
+E2B_EMBED_DIR ?= deploy/e2b-embed/embed
 
 e2b-embed-up: ## Start a self-hosted E2B (E2B Embed, pinned to E2B_EMBED_REF) on this KVM host
 	mkdir -p $(E2B_EMBED_DIR)
@@ -64,6 +69,12 @@ e2b-embed-env: ## Print E2B Embed's SDK exports: eval "$$(make -s e2b-embed-env)
 
 e2b-embed-down: ## Stop E2B Embed (keeps its data; add V=1 to remove it)
 	cd $(E2B_EMBED_DIR) && $(DOCKER) compose down $(if $(V),-v,)
+
+embed-stack-up: ## Runhive + E2B Embed on this KVM host: Embed, secrets, images, runhive-base, stack, check (deploy/e2b-embed)
+	E2B_EMBED_REF=$(E2B_EMBED_REF) deploy/e2b-embed/up.sh $(ARGS)
+
+embed-stack-down: ## Stop the Runhive + E2B Embed stack (ARGS=--embed also stops Embed, ARGS=--purge removes data)
+	deploy/e2b-embed/down.sh $(ARGS)
 
 openapi: ## Regenerate docs/api/openapi.json
 	$(UV) run runhive-server openapi > docs/api/openapi.json.tmp && mv docs/api/openapi.json.tmp docs/api/openapi.json

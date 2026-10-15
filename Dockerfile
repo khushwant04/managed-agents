@@ -36,8 +36,9 @@ ENV UV_COMPILE_BYTECODE=1 \
 WORKDIR /src
 
 # Selection shared by both sync steps. `--package` is repeated so the `e2b`
-# extra of runhive and the `s3` extra of runhive-server both apply.
-ARG UV_SYNC_ARGS="--frozen --no-dev --package runhive-server --package runhive --extra s3 --extra e2b"
+# extra of runhive and the `s3` extra of runhive-server both apply. The CLI is
+# included so `runhive e2b check` and friends run inside the containers.
+ARG UV_SYNC_ARGS="--frozen --no-dev --package runhive-server --package runhive --package runhive-cli --extra s3 --extra e2b"
 
 # 1. Third-party dependencies only (cached until uv.lock changes).
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -51,6 +52,8 @@ COPY packages/runhive/pyproject.toml packages/runhive/README.md packages/runhive
 COPY packages/runhive/src packages/runhive/src
 COPY packages/runhive-server/pyproject.toml packages/runhive-server/
 COPY packages/runhive-server/src packages/runhive-server/src
+COPY packages/runhive-cli/pyproject.toml packages/runhive-cli/
+COPY packages/runhive-cli/src packages/runhive-cli/src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync ${UV_SYNC_ARGS} --no-editable
 
@@ -63,19 +66,19 @@ LABEL org.opencontainers.image.title="runhive-server" \
       org.opencontainers.image.description="Gateway, registry, router, scheduler and runtime workers for Runhive." \
       org.opencontainers.image.source="https://github.com/khushwant04/managed-agents"
 
-RUN groupadd --system --gid 10001 agents \
- && useradd --system --uid 10001 --gid agents --home-dir /home/agents --create-home --shell /usr/sbin/nologin agents
+RUN groupadd --system --gid 10001 runhive \
+ && useradd --system --uid 10001 --gid runhive --home-dir /home/runhive --create-home --shell /usr/sbin/nologin runhive
 
 COPY --from=builder --chown=root:root /opt/venv /opt/venv
 
 ENV PATH="/opt/venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    RUNHIVE_BLOB_URL=file:///home/agents/blobs \
+    RUNHIVE_BLOB_URL=file:///home/runhive/blobs \
     RUNHIVE_HEALTHCHECK_URL=http://127.0.0.1:8080/healthz
 
-USER agents
-WORKDIR /home/agents
+USER runhive
+WORKDIR /home/runhive
 
 EXPOSE 8080
 

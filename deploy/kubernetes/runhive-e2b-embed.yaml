@@ -1,0 +1,764 @@
+# Runhive on Kubernetes with sandboxes on a self-hosted E2B runtime (E2B Embed).
+#
+# GENERATED from deploy/helm/runhive with examples/e2b-embed-values.yaml by
+# `make k8s-manifests`; edit the chart or the values file, not this file.
+#
+# Before applying, replace the example values: the Embed host (10.0.0.20), the
+# hostnames (runhive.example.com, console.runhive.example.com), the S3 endpoint
+# and the image tags. Create the `runhive` namespace and Secret first (see
+# deploy/kubernetes/README.md), then:
+#
+#   kubectl apply -n runhive -f deploy/kubernetes/runhive-e2b-embed.yaml
+---
+# Source: runhive/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: runhive
+  labels:
+    helm.sh/chart: runhive-0.1.0
+    app.kubernetes.io/name: runhive
+    app.kubernetes.io/instance: runhive
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: runhive
+automountServiceAccountToken: false
+---
+# Source: runhive/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: runhive
+  labels:
+    helm.sh/chart: runhive-0.1.0
+    app.kubernetes.io/name: runhive
+    app.kubernetes.io/instance: runhive
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: runhive
+data:
+  RUNHIVE_BLOB_URL: "s3://runhive/"
+  RUNHIVE_PUBLIC_URL: "https://runhive.example.com"
+  RUNHIVE_SANDBOX_PROVIDER: "e2b"
+  E2B_API_URL: "http://10.0.0.20:3000"
+  E2B_SANDBOX_URL: "http://10.0.0.20:3002"
+  RUNHIVE_WORKER_CONCURRENCY: "8"
+  RUNHIVE_LEASE_SECONDS: "30"
+  RUNHIVE_IDLE_PAUSE_SECONDS: "300"
+  RUNHIVE_POLL_INTERVAL: "1.0"
+  RUNHIVE_MAX_CALL_DEPTH: "3"
+  RUNHIVE_RATE_LIMIT_PER_MINUTE: "600"
+  AWS_DEFAULT_REGION: "us-east-1"
+  AWS_REGION: "us-east-1"
+  AWS_ENDPOINT_URL: "http://minio.storage.svc:9000"
+---
+# Source: runhive/templates/dashboard-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: runhive-dashboard
+  labels:
+    helm.sh/chart: runhive-0.1.0
+    app.kubernetes.io/name: runhive
+    app.kubernetes.io/instance: runhive
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: runhive
+    app.kubernetes.io/component: dashboard
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: runhive
+    app.kubernetes.io/instance: runhive
+    app.kubernetes.io/component: dashboard
+---
+# Source: runhive/templates/gateway-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: runhive-gateway
+  labels:
+    helm.sh/chart: runhive-0.1.0
+    app.kubernetes.io/name: runhive
+    app.kubernetes.io/instance: runhive
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: runhive
+    app.kubernetes.io/component: gateway
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: runhive
+    app.kubernetes.io/instance: runhive
+    app.kubernetes.io/component: gateway
+---
+# Source: runhive/templates/dashboard-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: runhive-dashboard
+  labels:
+    helm.sh/chart: runhive-0.1.0
+    app.kubernetes.io/name: runhive
+    app.kubernetes.io/instance: runhive
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: runhive
+    app.kubernetes.io/component: dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: runhive
+      app.kubernetes.io/instance: runhive
+      app.kubernetes.io/component: dashboard
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: runhive-0.1.0
+        app.kubernetes.io/name: runhive
+        app.kubernetes.io/instance: runhive
+        app.kubernetes.io/version: "0.1.0"
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/part-of: runhive
+        app.kubernetes.io/component: dashboard
+    spec:
+      serviceAccountName: runhive
+      automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: dashboard
+          image: ghcr.io/khushwant04/runhive-dashboard:0.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "3000"
+            # The dashboard calls the API server-side; the browser only talks to the dashboard.
+            - name: RUNHIVE_API_URL
+              value: "http://runhive-gateway:80"
+          livenessProbe:
+            httpGet:
+              path: /signin
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /signin
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          volumeMounts:
+            # Writable paths under the read-only root filesystem.
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/.next/cache
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: next-cache
+          emptyDir: {}
+---
+# Source: runhive/templates/gateway-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: runhive-gateway
+  labels:
+    helm.sh/chart: runhive-0.1.0
+    app.kubernetes.io/name: runhive
+    app.kubernetes.io/instance: runhive
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: runhive
+    app.kubernetes.io/component: gateway
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: runhive
+      app.kubernetes.io/instance: runhive
+      app.kubernetes.io/component: gateway
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 25%
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: runhive-0.1.0
+        app.kubernetes.io/name: runhive
+        app.kubernetes.io/instance: runhive
+        app.kubernetes.io/version: "0.1.0"
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/part-of: runhive
+        app.kubernetes.io/component: gateway
+      annotations:
+        
+        checksum/config: cf7c5faeb18d87198afcd0bbc307e16665f0206a8d0fdc94eb433f263d09d930
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: /metrics
+    spec:
+      
+      serviceAccountName: runhive
+      automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 10001
+        runAsGroup: 10001
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: home
+          emptyDir: {}
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: gateway
+          image: ghcr.io/khushwant04/runhive-server:0.1.0
+          imagePullPolicy: IfNotPresent
+          args: ["serve", "--host", "0.0.0.0", "--port", "8080"]
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: runhive
+          env:
+            
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: DATABASE_URL
+            - name: RUNHIVE_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: RUNHIVE_MASTER_KEY
+                  optional: true
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: ANTHROPIC_API_KEY
+                  optional: true
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: OPENAI_API_KEY
+                  optional: true
+            - name: E2B_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: E2B_API_KEY
+                  optional: true
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: AWS_ACCESS_KEY_ID
+                  optional: true
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: AWS_SECRET_ACCESS_KEY
+                  optional: true
+            # Bootstrap only from the gateway so components don't race to create it.
+            - name: RUNHIVE_BOOTSTRAP_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: RUNHIVE_BOOTSTRAP_KEY
+                  optional: true
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 250m
+              memory: 256Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: home
+              mountPath: /home/runhive
+---
+# Source: runhive/templates/scheduler-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: runhive-scheduler
+  labels:
+    helm.sh/chart: runhive-0.1.0
+    app.kubernetes.io/name: runhive
+    app.kubernetes.io/instance: runhive
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: runhive
+    app.kubernetes.io/component: scheduler
+spec:
+  # One scheduler; Recreate avoids two overlapping during rollouts (it also
+  # takes Postgres advisory locks, so an overlap would be safe, just wasteful).
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: runhive
+      app.kubernetes.io/instance: runhive
+      app.kubernetes.io/component: scheduler
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: runhive-0.1.0
+        app.kubernetes.io/name: runhive
+        app.kubernetes.io/instance: runhive
+        app.kubernetes.io/version: "0.1.0"
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/part-of: runhive
+        app.kubernetes.io/component: scheduler
+      annotations:
+        
+        checksum/config: cf7c5faeb18d87198afcd0bbc307e16665f0206a8d0fdc94eb433f263d09d930
+    spec:
+      
+      serviceAccountName: runhive
+      automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 10001
+        runAsGroup: 10001
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: home
+          emptyDir: {}
+      containers:
+        - name: scheduler
+          image: ghcr.io/khushwant04/runhive-server:0.1.0
+          imagePullPolicy: IfNotPresent
+          args: ["scheduler"]
+          envFrom:
+            - configMapRef:
+                name: runhive
+          env:
+            
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: DATABASE_URL
+            - name: RUNHIVE_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: RUNHIVE_MASTER_KEY
+                  optional: true
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: ANTHROPIC_API_KEY
+                  optional: true
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: OPENAI_API_KEY
+                  optional: true
+            - name: E2B_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: E2B_API_KEY
+                  optional: true
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: AWS_ACCESS_KEY_ID
+                  optional: true
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: AWS_SECRET_ACCESS_KEY
+                  optional: true
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: home
+              mountPath: /home/runhive
+---
+# Source: runhive/templates/worker-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: runhive-worker
+  labels:
+    helm.sh/chart: runhive-0.1.0
+    app.kubernetes.io/name: runhive
+    app.kubernetes.io/instance: runhive
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: runhive
+    app.kubernetes.io/component: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: runhive
+      app.kubernetes.io/instance: runhive
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: runhive-0.1.0
+        app.kubernetes.io/name: runhive
+        app.kubernetes.io/instance: runhive
+        app.kubernetes.io/version: "0.1.0"
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/part-of: runhive
+        app.kubernetes.io/component: worker
+      annotations:
+        
+        checksum/config: cf7c5faeb18d87198afcd0bbc307e16665f0206a8d0fdc94eb433f263d09d930
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: /metrics
+    spec:
+      
+      serviceAccountName: runhive
+      automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 10001
+        runAsGroup: 10001
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: home
+          emptyDir: {}
+      terminationGracePeriodSeconds: 120
+      containers:
+        - name: worker
+          image: ghcr.io/khushwant04/runhive-server:0.1.0
+          imagePullPolicy: IfNotPresent
+          args: ["worker"]
+          envFrom:
+            - configMapRef:
+                name: runhive
+          env:
+            
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: DATABASE_URL
+            - name: RUNHIVE_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: RUNHIVE_MASTER_KEY
+                  optional: true
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: ANTHROPIC_API_KEY
+                  optional: true
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: OPENAI_API_KEY
+                  optional: true
+            - name: E2B_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: E2B_API_KEY
+                  optional: true
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: AWS_ACCESS_KEY_ID
+                  optional: true
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: AWS_SECRET_ACCESS_KEY
+                  optional: true
+            # Stable, readable worker ids in run leases.
+            - name: RUNHIVE_WORKER_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            # Workers serve Prometheus metrics on this port (0 disables it).
+            - name: RUNHIVE_METRICS_PORT
+              value: "9090"
+          ports:
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            limits:
+              memory: 2Gi
+            requests:
+              cpu: 250m
+              memory: 512Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: home
+              mountPath: /home/runhive
+---
+# Source: runhive/templates/gateway-hpa.yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: runhive-gateway
+  labels:
+    helm.sh/chart: runhive-0.1.0
+    app.kubernetes.io/name: runhive
+    app.kubernetes.io/instance: runhive
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: runhive
+    app.kubernetes.io/component: gateway
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: runhive-gateway
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# Source: runhive/templates/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: runhive
+  labels:
+    helm.sh/chart: runhive-0.1.0
+    app.kubernetes.io/name: runhive
+    app.kubernetes.io/instance: runhive
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: runhive
+    app.kubernetes.io/component: gateway
+  annotations:
+    # SSE / WebSocket: keep long-lived streams open and flush events immediately.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/proxy-body-size: "64m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - "runhive.example.com"
+        - "console.runhive.example.com"
+      secretName: runhive-tls
+  rules:
+    - host: "runhive.example.com"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: runhive-gateway
+                port:
+                  name: http
+    - host: "console.runhive.example.com"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: runhive-dashboard
+                port:
+                  name: http
+---
+# Source: runhive/templates/migrate-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: runhive-migrate
+  labels:
+    helm.sh/chart: runhive-0.1.0
+    app.kubernetes.io/name: runhive
+    app.kubernetes.io/instance: runhive
+    app.kubernetes.io/version: "0.1.0"
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/part-of: runhive
+    app.kubernetes.io/component: migrate
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        helm.sh/chart: runhive-0.1.0
+        app.kubernetes.io/name: runhive
+        app.kubernetes.io/instance: runhive
+        app.kubernetes.io/version: "0.1.0"
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/part-of: runhive
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: OnFailure
+      # The release ServiceAccount may not exist yet on first install.
+      automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 10001
+        runAsGroup: 10001
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: ghcr.io/khushwant04/runhive-server:0.1.0
+          imagePullPolicy: IfNotPresent
+          args: ["migrate"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: runhive
+                  key: DATABASE_URL
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: home
+              mountPath: /home/runhive
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: home
+          emptyDir: {}

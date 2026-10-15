@@ -1,22 +1,36 @@
+<div align="center">
+
 # Runhive
 
+**Run your hive of agents.**
+
+Open-source, self-hosted platform to register, route, host and observe AI agents, on Claude or OpenAI models, with every session in its own sandbox.
+
 [![CI](https://github.com/khushwant04/managed-agents/actions/workflows/ci.yml/badge.svg)](https://github.com/khushwant04/managed-agents/actions/workflows/ci.yml)
+![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
+![Node 22](https://img.shields.io/badge/node-22-339933)
+![Status: v0.1 pre-release](https://img.shields.io/badge/status-v0.1%20pre--release-orange)
 
-Runhive is an open-source, self-hosted platform for running AI agents. Register an agent once, and the platform hosts it, routes every request to the right agent and version, and runs it on its own harness against Claude or OpenAI models, using each model API's native features.
+![The Runhive dashboard](dashboard/docs/dashboard.png)
 
-> **Status:** v0.1 is implemented but not yet released. Everything below is built and tested on scripted and recorded model responses. Still to do: live runs against the model APIs, the E2B template build, the package-name and license decisions ([ADR-0015](docs/adr/0015-package-and-install-names.md), [ADR-0016](docs/adr/0016-license.md)) and the first release. See the [roadmap](docs/roadmap.md).
+</div>
 
-## What it does
+Register an agent once. Runhive versions it, routes every request to the right version, runs it on its own durable harness against the model APIs' native features, gives each session an isolated [E2B](https://e2b.dev) sandbox, and lets you watch it all live. It runs on your own infrastructure, with E2B Cloud or a fully self-hosted [E2B Embed](https://github.com/e2b-dev/runtime) runtime.
 
-- **Register:** agents are versioned definitions (models, instructions, tools, skills, policies) pushed from code, YAML or the API. Identical definitions are deduplicated by content hash, and movable aliases such as `prod` and `canary` point at versions.
-- **Route:** one gateway resolves `name@alias` to a version, splits new sessions between versions by weight, falls back across models on 429s, 5xx errors and refusals, and lets agents call other agents.
-- **Host:** deployments expose agents through HTTP, signed webhooks (GitHub, Slack, Stripe, generic), cron and queue triggers. Sessions stream events over resumable SSE or WebSocket.
-- **Run durably:** the project's own agent loop handles tool calling, parallel tools, steering, interrupts, approvals, subagents, compaction and budgets. Every model and tool call is a checkpointed step, so if a worker dies mid-run, another resumes the session without repeating completed work.
-- **Use native model features:** thin adapters for the Anthropic Messages API (adaptive thinking, prompt caching, server tools, refusal fallback), the OpenAI Responses API (reasoning effort, encrypted reasoning, native shell) and any OpenAI-compatible endpoint. A session can switch vendors between runs.
-- **Sandbox:** each session gets an [E2B](https://e2b.dev) sandbox for shell, files and code, on E2B Cloud or a self-hosted [E2B Embed](https://github.com/e2b-dev/runtime) install; `runhive e2b check` verifies either end to end. Docker or a local directory can be used for development.
-- **Operate:** encrypted secrets that never reach the model or the sandbox; API keys with roles; per-project allowlists and token budgets; an audit log; Prometheus metrics, OpenTelemetry traces and a Grafana dashboard.
+> **Status:** v0.1 is built and tested on scripted and recorded model responses; it has not yet been run against live model APIs or released. See the [roadmap](docs/roadmap.md).
 
-Claude Managed Agents and OpenAI's Agents API are reference designs, not dependencies: the project only calls model inference APIs.
+## Why Runhive
+
+| | |
+| --- | --- |
+| **Register** | Agents are versioned definitions (models, instructions, tools, skills, policies) pushed from code, YAML or the API. Identical definitions are deduplicated by content hash, and movable aliases such as `prod` and `canary` point at versions. |
+| **Route** | One gateway resolves `name@alias`, splits new sessions between versions by weight, falls back across models on 429s, 5xx errors and refusals, and lets agents call other agents. |
+| **Host** | Deployments expose agents through HTTP, signed webhooks (GitHub, Slack, Stripe, generic), cron and queues. Sessions stream over resumable SSE or WebSocket. |
+| **Run durably** | Runhive's own agent loop handles tool calls, parallel tools, steering, interrupts, approvals, subagents, compaction and budgets. Every model and tool call is a checkpointed step, so if a worker dies mid-run, another resumes the session without repeating work. |
+| **Native model features** | Thin adapters for the Anthropic Messages API (adaptive thinking, prompt caching, server tools, refusal fallback), the OpenAI Responses API (reasoning effort, encrypted reasoning, native shell) and any OpenAI-compatible endpoint. |
+| **Sandboxes** | Each session gets an E2B sandbox for shell, files and code, on E2B Cloud or self-hosted E2B Embed. `runhive e2b check` verifies either end to end. Docker and local providers cover development. |
+| **Operate** | Encrypted secrets that never reach the model or sandbox; API keys with roles; per-project allowlists and token budgets; audit log; Prometheus metrics, OpenTelemetry traces and a Grafana dashboard. |
+| **Console** | A web dashboard in the style of the Claude Console: playground, agents and aliases, deployments and webhooks, live session traces with approvals and replay, usage, keys and logs. |
 
 ```mermaid
 flowchart LR
@@ -34,14 +48,15 @@ flowchart LR
     end
     pg -- lease --> worker
     worker --> models["Claude · OpenAI · compatible"]
-    worker --> e2b["E2B sandboxes"]
+    worker --> e2b["E2B sandboxes<br/>Cloud or Embed"]
     worker --> tools["Your tools<br/>webhooks · MCP"]
 ```
 
 ## Quickstart
 
 ```bash
-uv sync                                   # Python 3.11+; installs the workspace
+git clone https://github.com/khushwant04/managed-agents.git runhive && cd runhive
+uv sync                                   # Python 3.11+; installs the workspace and the `runhive` CLI
 export ANTHROPIC_API_KEY=...              # and/or OPENAI_API_KEY
 ```
 
@@ -68,10 +83,10 @@ for ev in session.events():
         print(ev.text, end="")
 ```
 
-**Host it** with Postgres, MinIO, a gateway, workers and a scheduler:
+**Host it** (Postgres, MinIO, gateway, workers, scheduler and the dashboard):
 
 ```bash
-docker compose up -d                                   # or: make dev; or: uv run runhive dev (needs Postgres)
+docker compose up -d --build              # API :8080, dashboard :3000 (sign in with ak_dev_admin)
 export RUNHIVE_BASE_URL=http://localhost:8080 RUNHIVE_API_KEY=ak_dev_admin
 uv run runhive apply examples/incident-investigator/agent.py --promote prod
 uv run runhive deploy incident-investigator --http --cron "*/30 * * * *" --input "Check error budgets"
@@ -97,13 +112,69 @@ const session = await new Client().invoke('incident-investigator@prod', { input:
 for await (const ev of session.events()) if (ev.type === 'message.agent.delta') process.stdout.write(ev.text);
 ```
 
-**Watch it** in the dashboard (`cd dashboard && npm install && npm run dev`, then sign in with your API key): a console in the style of the Claude Console with a playground, live session traces, deployments, webhooks and usage.
+## Deploy
 
-![The dashboard](dashboard/docs/dashboard.png)
+Pick the shape that fits; all three run the same images.
+
+| | Where | Sandboxes | Guide |
+| --- | --- | --- | --- |
+| **Local** | A laptop or VM with Docker | E2B Cloud (`E2B_API_KEY`), or Docker sandboxes on the same machine | [`docker-compose.yml`](docker-compose.yml), [`deploy/compose`](deploy/compose) |
+| **Single host, fully self-hosted** | One Linux machine with KVM | **E2B Embed** on the same host; no E2B account needed | [`deploy/e2b-embed`](deploy/e2b-embed/README.md) |
+| **Kubernetes** | Any cluster | E2B Cloud, or E2B Embed on KVM hosts the pods can reach | [Helm chart](deploy/helm/runhive), [plain manifests](deploy/kubernetes/README.md) |
+
+### Single host with E2B Embed
+
+Runhive and the E2B runtime (Firecracker microVMs) on one machine, set up by one script:
+
+```bash
+cd deploy/e2b-embed
+./up.sh            # E2B Embed, generated secrets, images, the runhive-base template, the stack, an end-to-end check
+$EDITOR .env       # add ANTHROPIC_API_KEY / OPENAI_API_KEY
+./up.sh            # apply; safe to re-run
+```
+
+The API is then on `:8080`, the dashboard on `:3100` and E2B's own dashboard on `:3001`. The [guide](deploy/e2b-embed/README.md) covers requirements, ports, upgrades, backups and security.
+
+### Kubernetes
+
+```bash
+helm install runhive deploy/helm/runhive -n runhive --create-namespace \
+  -f deploy/helm/runhive/examples/e2b-embed-values.yaml      # or your own values
+```
+
+The chart runs the gateway (with an HPA), workers (fixed or KEDA-scaled on queue depth), the scheduler, migrations and the dashboard, plus an ingress tuned for long-lived streams. For `kubectl` without Helm, [`deploy/kubernetes/runhive-e2b-embed.yaml`](deploy/kubernetes/runhive-e2b-embed.yaml) is the chart rendered with the E2B Embed example values.
+
+### Images
+
+| Image | Built from | What it runs |
+| --- | --- | --- |
+| `ghcr.io/khushwant04/runhive-server` | [`Dockerfile`](Dockerfile) | `runhive-server serve`, `worker`, `scheduler`, `migrate`, plus the `runhive` CLI (`runhive e2b check`) |
+| `ghcr.io/khushwant04/runhive-dashboard` | [`dashboard/Dockerfile`](dashboard/Dockerfile) | The web console (Next.js standalone) |
+| `runhive-base` (E2B template) | [`infra/e2b/Dockerfile`](infra/e2b/Dockerfile) | The sandbox each session runs in: Ubuntu, bash, Python, Node, git |
+
+The [release workflow](.github/workflows/release.yml) publishes both images for `linux/amd64` and `linux/arm64` on a `v*` tag. Until then, Compose builds them from source.
+
+## The console
+
+<p>
+  <img src="dashboard/docs/session-timeline.png" alt="Live session trace with tool calls and the side panel" width="49%">
+  <img src="dashboard/docs/playground.png" alt="Playground after a run" width="49%">
+</p>
+<p>
+  <img src="dashboard/docs/agent-detail.png" alt="Agent detail with alias traffic" width="49%">
+  <img src="dashboard/docs/usage.png" alt="Usage with stacked token chart" width="49%">
+</p>
+
+The dashboard never sees your API key: it lives in an httpOnly cookie on the dashboard's server, which proxies to the API. See [`dashboard/`](dashboard/README.md).
 
 ## The demo
 
-[`examples/incident-investigator`](examples/incident-investigator/README.md) is the flagship demo. It runs an on-call agent on a recorded 5xx-spike scenario with decoy deploys. It has a runbooks skill and tools that run in-process locally and as signed webhooks when hosted. It also includes a chaos demo (kill a worker mid-run and watch the session resume) and a benchmark that runs the same incident on Claude and GPT, measuring correctness, time, tokens and cost.
+[`examples/incident-investigator`](examples/incident-investigator/README.md) is an on-call agent run on a recorded 5xx-spike scenario with decoy deploys. It includes:
+
+- a runbooks skill;
+- tools that run in-process locally and as signed webhooks when hosted;
+- a chaos demo: kill a worker mid-run and watch the session resume;
+- a benchmark that runs the same incident on Claude and GPT, comparing correctness, time, tokens and cost.
 
 ## Repository layout
 
@@ -111,13 +182,15 @@ for await (const ev of session.events()) if (ev.type === 'message.agent.delta') 
 | --- | --- |
 | `packages/runhive` | Python SDK and runtime: `Agent`, `tool`, `Skill`, the runner, model adapters, sandbox providers, MCP and webhook tools, `Client` / `AsyncClient` |
 | `packages/runhive-server` | Gateway (FastAPI), registry, router, run queue, workers, scheduler, secrets, metrics; the `runhive-server` command |
-| `packages/runhive-cli` | The `runhive` command: `run`, `dev`, `apply`, `deploy`, `promote`, `rollback`, `invoke`, `sessions`, `secrets` |
+| `packages/runhive-cli` | The `runhive` command: `run`, `dev`, `apply`, `deploy`, `promote`, `rollback`, `invoke`, `sessions`, `secrets`, `e2b check` |
 | `typescript/` | `@runhive/client` (types generated from the OpenAPI spec) and `@runhive/react` hooks |
-| `dashboard/` | Next.js + shadcn/ui console: playground, agents, versions and aliases, deployments and webhooks, live session traces with approvals and replay, usage, keys, audit |
+| `dashboard/` | Next.js + shadcn/ui console |
 | `examples/incident-investigator` | The flagship demo, its tools service and the benchmark |
-| `docker-compose.yml`, `Dockerfile`, `deploy/compose` | Local stack and server image |
-| `deploy/helm`, `deploy/grafana` | Helm chart (HPA gateway, KEDA-scaled workers) and Grafana dashboard |
-| `infra/e2b` | The `runhive-base` sandbox template |
+| `docker-compose.yml`, `deploy/compose` | Local stack |
+| `deploy/e2b-embed` | Runhive + E2B Embed on one host: Compose, `up.sh` / `down.sh` |
+| `deploy/helm/runhive`, `deploy/kubernetes` | Helm chart (gateway HPA, KEDA-scaled workers, dashboard) and rendered manifests |
+| `deploy/grafana` | Grafana dashboard |
+| `infra/e2b` | The `runhive-base` sandbox template and `build_template.py` |
 | `docs/` | Design plan, architecture, ADRs, API reference (`docs/api/openapi.json`) |
 
 ## Development
@@ -129,16 +202,26 @@ make test           # Python tests; starts a throwaway Postgres (or uses TEST_DA
 make test-live      # live API tests (need ANTHROPIC_API_KEY / OPENAI_API_KEY)
 make openapi        # regenerate docs/api/openapi.json after API changes
 make dev            # local stack with Docker Compose
+make embed-stack-up # Runhive + E2B Embed on this KVM host
+make k8s-manifests  # re-render deploy/kubernetes from the chart
 make help           # everything else
 ```
 
-The TypeScript SDK (`cd typescript && npm ci && npm test`) and the dashboard (`cd dashboard && npm ci && npm test`) have their own tests. Model calls in tests are scripted or replayed from recorded stream events, so no API keys are needed. CI runs lint, the Python tests on Postgres, the TypeScript and dashboard checks, a check that the OpenAPI spec and generated types are current, image builds, and Helm and Compose validation.
+The TypeScript SDK (`cd typescript && npm ci && npm test`) and the dashboard (`cd dashboard && npm ci && npm test`) have their own tests. Model calls in tests are scripted or replayed from recorded stream events, so no API keys are needed.
+
+CI runs:
+- lint and the Python tests on Postgres;
+- the TypeScript and dashboard checks;
+- checks that the OpenAPI spec, the generated types and the rendered manifests are current;
+- the image builds;
+- Helm and Compose validation.
+
+A separate workflow ([`e2b-embed.yml`](.github/workflows/e2b-embed.yml)) boots E2B Embed and runs `runhive e2b check` against it; it needs a runner with KVM.
 
 ## Documentation
 
 | Doc | What it covers |
 | --- | --- |
-| [Design plan](docs/design-plan.md) | The full SDK and infrastructure plan this repo is built from |
 | [Architecture overview](docs/architecture/overview.md) | Control plane, data plane, request path |
 | [Core abstractions](docs/architecture/core-abstractions.md) | The twelve objects and the event schema |
 | [Registration, routing and hosting](docs/architecture/registry-routing-hosting.md) | Registry, router, deployments, triggers |
@@ -147,15 +230,15 @@ The TypeScript SDK (`cd typescript && npm ci && npm test`) and the dashboard (`c
 | [Tools, skills and memory](docs/architecture/tools-skills-memory.md) | Where tools run, approvals, secrets, skills, memory |
 | [Infrastructure](docs/architecture/infrastructure.md) | Components, data stores, sandboxes, deployment |
 | [Security and operations](docs/architecture/security-operations.md) | Trust zones, tenancy, observability, cost controls |
+| [E2B sandboxes](infra/e2b/README.md) | The template, E2B Cloud, E2B Embed, `runhive e2b check` |
 | [Python SDK](docs/sdk/python.md) · [TypeScript SDK](docs/sdk/typescript.md) | SDKs and the CLI |
 | [REST API](docs/api/rest.md) | Server REST surface (v1) |
-| [Reference designs](docs/reference-designs.md) | Claude Managed Agents and OpenAI Agents API compared |
-| [Roadmap and risks](docs/roadmap.md) | Phases, gates, progress, risks, open questions |
-| [ADRs](docs/adr/README.md) | Architecture decision records |
+| [Design plan](docs/design-plan.md) · [Reference designs](docs/reference-designs.md) | The original plan; Claude Managed Agents and OpenAI's Agents API compared |
+| [Roadmap and risks](docs/roadmap.md) · [ADRs](docs/adr/README.md) | Phases, gates, progress; architecture decision records |
 
 ## License
 
-The plan proposes Apache-2.0; the choice is still open in [ADR-0016](docs/adr/0016-license.md). A `LICENSE` file will be added once it is accepted.
+Not yet chosen: Apache-2.0 is proposed in [ADR-0016](docs/adr/0016-license.md), and a `LICENSE` file will be added once it is accepted.
 
 ## Author
 

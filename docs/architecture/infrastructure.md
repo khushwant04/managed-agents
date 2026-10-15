@@ -14,7 +14,7 @@ Two planes share one Postgres: a control plane (gateway, registry, router, sched
 | Runtime workers | Data | Execute runs step by step; call model adapters; drive tools | Python asyncio workers pulling from the run queue |
 | Tool gateway | Data | Webhook tools, MCP client, secret injection, approvals, egress rules | Inside workers in v1 |
 | Sandbox manager | Data | Create, pause, resume and destroy sandboxes; file sync; timeouts | E2B SDK; Docker provider for dev |
-| Dashboard | — | Agents, versions, deployments, session timelines | Small Next.js app |
+| Dashboard | — | Playground, agents, versions, deployments, webhooks, session timelines, usage | Next.js app (`runhive-dashboard` image) |
 
 ## Durable execution
 
@@ -61,6 +61,7 @@ Decision record: [ADR-0006](../adr/0006-e2b-sandbox-per-session.md).
 
 ## Deployment
 
-- **Local:** `docker compose up` starts gateway, worker, Postgres, MinIO and dashboard. `runhive dev` runs gateway, worker and a Docker sandbox locally.
-- **Kubernetes (Helm chart):** gateway Deployment with HPA; worker Deployment scaled by KEDA on queue depth; external or bundled Postgres; Ingress with long read timeouts for SSE.
+- **Local:** `docker compose up` starts gateway, worker, scheduler, Postgres, MinIO and dashboard. `runhive dev` runs gateway, worker and a Docker sandbox locally.
+- **Single host, fully self-hosted:** [`deploy/e2b-embed`](../../deploy/e2b-embed/README.md) runs Runhive next to E2B Embed on one KVM machine. `up.sh` starts Embed, generates secrets, builds `runhive-base` on Embed, starts the stack and runs `runhive e2b check`.
+- **Kubernetes (Helm chart):** gateway Deployment with HPA; worker Deployment scaled by KEDA on queue depth; dashboard Deployment; external or bundled Postgres; Ingress with long read timeouts for SSE. [`deploy/kubernetes`](../../deploy/kubernetes/README.md) has the chart rendered for E2B Embed, for plain `kubectl`.
 - **CI (GitHub Actions):** lint, tests on recorded responses, nightly live tests, PyPI publish (npm once the TypeScript SDK ships) and E2B template build on tags.

@@ -169,7 +169,7 @@ optional keys.
 - name: tmp
   mountPath: /tmp
 - name: home
-  mountPath: /home/agents
+  mountPath: /home/runhive
 {{- end }}
 
 {{- define "runhive.volumes" -}}

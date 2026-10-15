@@ -1,0 +1,11 @@
+# Runhive on Kubernetes with sandboxes on a self-hosted E2B runtime (E2B Embed).
+#
+# GENERATED from deploy/helm/runhive with examples/e2b-embed-values.yaml by
+# `make k8s-manifests`; edit the chart or the values file, not this file.
+#
+# Before applying, replace the example values: the Embed host (10.0.0.20), the
+# hostnames (runhive.example.com, console.runhive.example.com), the S3 endpoint
+# and the image tags. Create the `runhive` namespace and Secret first (see
+# deploy/kubernetes/README.md), then:
+#
+#   kubectl apply -n runhive -f deploy/kubernetes/runhive-e2b-embed.yaml

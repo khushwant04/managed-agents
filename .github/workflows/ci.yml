@@ -110,8 +110,13 @@ jobs:
           tags: runhive-dashboard:ci
           cache-from: type=gha,scope=dashboard
           cache-to: type=gha,mode=max,scope=dashboard
-      - name: Compose file is valid
-        run: docker compose config --quiet
+      - name: Compose files are valid
+        run: |
+          docker compose config --quiet
+          # Runhive + E2B Embed: its secrets come from up.sh, so validate with placeholders.
+          printf '%s\n' POSTGRES_PASSWORD=x MINIO_ROOT_PASSWORD=x RUNHIVE_MASTER_KEY=x \
+            RUNHIVE_BOOTSTRAP_KEY=x E2B_API_KEY=x > "$RUNNER_TEMP/embed.env"
+          docker compose -f deploy/e2b-embed/compose.yaml --env-file "$RUNNER_TEMP/embed.env" --profile tools config --quiet
 
   helm:
     name: Helm chart
@@ -133,6 +138,11 @@ jobs:
             helm template ci . -f "$f" > /dev/null
             echo "::endgroup::"
           done
+          helm lint --strict . -f examples/e2b-embed-values.yaml
+      - name: Plain manifests are current
+        run: |
+          make k8s-manifests
+          git diff --exit-code -- deploy/kubernetes/ || { echo "::error::deploy/kubernetes is stale; run make k8s-manifests"; exit 1; }
 
   openapi:
     name: OpenAPI spec is current
