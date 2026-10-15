@@ -1,14 +1,17 @@
 name: Release
 
-# On a version tag (v1.2.3):
-#   1. build sdists + wheels for the three workspace packages and publish them
-#      to PyPI with trusted publishing (no API token);
+# On a version tag (v1.2.3, or v1.2.3-rc.1):
+#   1. build sdists + wheels for the three workspace packages (and publish them
+#      to PyPI with trusted publishing once the PYPI_PUBLISH variable is "true");
 #   2. build and push the server and dashboard images to GHCR
 #      (runhive-server, runhive-dashboard; linux/amd64 and linux/arm64);
-#   3. build the `runhive-base` E2B sandbox template.
+#   3. build the `runhive-base` E2B sandbox template (when E2B credentials are set);
+#   4. create the GitHub release: notes from CHANGELOG.md, the wheels and sdists
+#      attached. Tags below v1.0.0 and tags with a suffix (-rc.1) are pre-releases.
 #
 # One-time setup:
-#   - PyPI: add a trusted publisher for each of runhive,
+#   - PyPI (optional until you publish there): set the repository variable
+#     PYPI_PUBLISH=true and add a trusted publisher for each of runhive,
 #     runhive-server and runhive-cli (owner khushwant04, repo
 #     managed-agents, workflow release.yml, environment pypi).
 #   - GitHub: create the `pypi` environment (optionally with required reviewers).
@@ -69,7 +72,7 @@ jobs:
   pypi-publish:
     name: Publish to PyPI
     needs: python-build
-    if: needs.python-build.result == 'success' && (github.event_name == 'push' || inputs.publish)
+    if: needs.python-build.result == 'success' && vars.PYPI_PUBLISH == 'true' && (github.event_name == 'push' || inputs.publish)
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -176,4 +179,59 @@ jobs:
             npx --yes @e2b/cli template build
           else
             echo "::warning::Neither E2B_API_KEY nor E2B_ACCESS_TOKEN is set; skipping the E2B template build."
+          fi
+
+  github-release:
+    name: GitHub release
+    needs: [python-build, image, dashboard-image]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: dist/
+      - name: Release notes from CHANGELOG.md
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          # The section between "## [<version>]" and the next "## [" heading.
+          awk -v v="$version" '
+            $0 ~ "^## \\[" v "\\]" { on = 1; next }
+            on && /^## \[/ { exit }
+            on && /^\[[^]]+\]: / { exit }
+            on { print }
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "::error file=CHANGELOG.md::no section for $version"
+            exit 1
+          fi
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          cat >> notes.md <<EOF
+
+          ### Install
+
+          \`\`\`bash
+          docker pull ghcr.io/${owner}/runhive-server:${version}
+          docker pull ghcr.io/${owner}/runhive-dashboard:${version}
+          # Python: the wheels attached below
+          pip install runhive-${version}-py3-none-any.whl runhive_server-${version}-py3-none-any.whl runhive_cli-${version}-py3-none-any.whl
+          \`\`\`
+
+          Deployment guides: [single host with E2B Embed](https://github.com/${GITHUB_REPOSITORY}/tree/${GITHUB_REF_NAME}/deploy/e2b-embed) · [Kubernetes](https://github.com/${GITHUB_REPOSITORY}/tree/${GITHUB_REF_NAME}/deploy/kubernetes)
+          EOF
+          cat notes.md
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          prerelease=""
+          case "$GITHUB_REF_NAME" in v0.*|*-*) prerelease="--prerelease" ;; esac
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+            gh release edit "$GITHUB_REF_NAME" --notes-file notes.md $prerelease
+          else
+            gh release create "$GITHUB_REF_NAME" dist/* --title "Runhive $GITHUB_REF_NAME" --notes-file notes.md --verify-tag $prerelease
           fi

@@ -2158,7 +2158,7 @@ wheels = [
 
 [[package]]
 name = "runhive"
-version = "0.1.0.dev0"
+version = "0.1.0"
 source = { editable = "packages/runhive" }
 dependencies = [
     { name = "anthropic" },
@@ -2188,7 +2188,7 @@ provides-extras = ["e2b"]
 
 [[package]]
 name = "runhive-cli"
-version = "0.1.0.dev0"
+version = "0.1.0"
 source = { editable = "packages/runhive-cli" }
 dependencies = [
     { name = "runhive" },
@@ -2203,7 +2203,7 @@ requires-dist = [
 
 [[package]]
 name = "runhive-server"
-version = "0.1.0.dev0"
+version = "0.1.0"
 source = { editable = "packages/runhive-server" }
 dependencies = [
     { name = "asyncpg" },

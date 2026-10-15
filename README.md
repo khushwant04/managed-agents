@@ -7,7 +7,8 @@ A self-hosted platform to register, route, host and observe AI agents on Claude 
 [![CI](https://github.com/khushwant04/managed-agents/actions/workflows/ci.yml/badge.svg)](https://github.com/khushwant04/managed-agents/actions/workflows/ci.yml)
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Node 22](https://img.shields.io/badge/node-22-339933)
-![Status](https://img.shields.io/badge/status-v0.1%20pre--release-orange)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/khushwant04/managed-agents?include_prereleases&label=release)](https://github.com/khushwant04/managed-agents/releases)
 
 [Quickstart](#quickstart) · [Deploy](#deploy) · [Docs](#documentation) · [Roadmap](docs/roadmap.md)
 
@@ -26,7 +27,7 @@ Define an agent in Python, YAML or over the API, and Runhive takes it from there
 Runhive runs entirely on your infrastructure, with E2B Cloud or a self-hosted **[E2B Embed](https://github.com/e2b-dev/runtime)** runtime.
 
 > [!NOTE]
-> v0.1 is built and tested on scripted and recorded model responses, but has not yet been run against live model APIs or released. Progress is tracked in the [roadmap](docs/roadmap.md).
+> **v0.1.0 is a pre-release.** It is built and tested on scripted and recorded model responses, but has not yet been run against live model APIs. See the [changelog](CHANGELOG.md) and the [roadmap](docs/roadmap.md).
 
 ## Features
 
@@ -195,7 +196,7 @@ Without Helm, apply [`deploy/kubernetes/runhive-e2b-embed.yaml`](deploy/kubernet
 | `ghcr.io/khushwant04/runhive-dashboard` | [`dashboard/Dockerfile`](dashboard/Dockerfile) | The web console |
 | `runhive-base` E2B template | [`infra/e2b/Dockerfile`](infra/e2b/Dockerfile) | Each session's sandbox: Ubuntu, bash, Python, Node, git |
 
-The [release workflow](.github/workflows/release.yml) publishes the two container images for `linux/amd64` and `linux/arm64` on a `v*` tag. Until the first release, Compose builds them from source.
+The [release workflow](.github/workflows/release.yml) publishes the two container images for `linux/amd64` and `linux/arm64` on every `v*` tag, for example `ghcr.io/khushwant04/runhive-server:0.1.0`. Compose builds them from source unless you set `RUNHIVE_IMAGE` / `RUNHIVE_DASHBOARD_IMAGE`.
 
 ## Packages
 
@@ -208,7 +209,7 @@ The [release workflow](.github/workflows/release.yml) publishes the two containe
 | [`@runhive/react`](typescript/packages/react) | `npm i @runhive/react` | React hooks: `useSession`, `useEvents` |
 | [Console](dashboard/README.md) | Docker image | Next.js + shadcn/ui web console |
 
-None of these are on PyPI or npm yet; until the first release, install from this repository with `uv sync` and `npm ci`.
+The packages are not on PyPI or npm yet: install from this repository with `uv sync` and `npm ci`, or download the Python wheels from the [v0.1.0 release](https://github.com/khushwant04/managed-agents/releases/tag/v0.1.0).
 
 ## Example
 
@@ -272,7 +273,7 @@ CI checks:
 
 ## License
 
-Not yet chosen. Apache-2.0 is proposed in [ADR-0016](docs/adr/0016-license.md); a `LICENSE` file follows once it is accepted.
+Runhive is licensed under the [Apache License 2.0](LICENSE). See [`NOTICE`](NOTICE) and [ADR-0016](docs/adr/0016-license.md).
 
 ## Author
 

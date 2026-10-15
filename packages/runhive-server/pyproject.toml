@@ -1,9 +1,23 @@
 [project]
 name = "runhive-server"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "Gateway, registry, router, scheduler and runtime workers for Runhive."
 requires-python = ">=3.11"
 authors = [{ name = "Khushwant Sanwalot" }]
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+keywords = ["agents", "llm", "claude", "openai", "e2b", "sandbox", "durable-execution"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
 dependencies = [
   "runhive",
   "fastapi>=0.115",
@@ -22,6 +36,13 @@ otel = ["opentelemetry-sdk>=1.27", "opentelemetry-exporter-otlp-proto-http>=1.27
 
 [project.scripts]
 runhive-server = "runhive_server.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/khushwant04/managed-agents"
+Documentation = "https://github.com/khushwant04/managed-agents/tree/main/docs"
+Repository = "https://github.com/khushwant04/managed-agents"
+Issues = "https://github.com/khushwant04/managed-agents/issues"
+Changelog = "https://github.com/khushwant04/managed-agents/blob/main/CHANGELOG.md"
 
 [build-system]
 requires = ["hatchling>=1.25"]

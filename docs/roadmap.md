@@ -10,7 +10,7 @@ Ship v0.1 with the Python SDK in about eight weeks: registry, router, runtime wi
 | 2. Portability | Done: Anthropic, OpenAI and OpenAI-compatible adapters, E2B/Docker/local sandboxes, MCP and webhook tools. Gate 2 (same task on Claude and GPT) needs a live run of `examples/incident-investigator/benchmark.py` |
 | 3. Registry and router | Done |
 | 4. Hosting | Done. Gate 3 is covered by the API tests (routing through weighted aliases, deployments, triggers) |
-| 5. Release | Built: Python client, CLI, Compose, Dockerfiles, CI, demo and benchmark; named Runhive (ADR-0015). Remaining: live runs with API keys, E2B template build, ADR-0016 license, reserving the PyPI and npm names, PyPI publish |
+| 5. Release | Built: Python client, CLI, Compose, Dockerfiles, CI, demo and benchmark; named Runhive (ADR-0015). Apache-2.0 (ADR-0016); v0.1.0 tagged as a pre-release. Remaining: live runs with API keys, E2B template build, PyPI and npm publishing |
 | After v0.1 | Built ahead of schedule: TypeScript client and React hooks, dashboard (redesigned on shadcn/ui in the style of the Claude Console), Helm chart with KEDA, OpenTelemetry spans |
 
 ## Phases and gates
@@ -69,7 +69,7 @@ gantt
 Each is tracked as a Proposed ADR with a recommendation.
 
 - [x] Install names: a fresh namespace, **Runhive**, for every package, import and command → [ADR-0015](adr/0015-package-and-install-names.md)
-- [ ] License: Apache-2.0 (patent grant) or MIT (simplest)? → [ADR-0016](adr/0016-license.md)
+- [x] License: Apache-2.0 → [ADR-0016](adr/0016-license.md)
 - [ ] Durable execution: plain Postgres queue in v0.1, or adopt Temporal or Restate from day one? → [ADR-0005](adr/0005-durable-execution-on-postgres.md)
 - [ ] Flagship demo: incident investigator or a GitHub issue fixer? → [ADR-0017](adr/0017-flagship-demo.md)
 
