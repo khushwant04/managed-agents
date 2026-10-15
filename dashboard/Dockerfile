@@ -18,7 +18,11 @@ ARG NODE_VERSION=22.22.0
 FROM node:${NODE_VERSION}-bookworm-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+COPY scripts/ensure-native.mjs scripts/
+# Retry slow registry fetches (multi-arch builds share one runner), then make
+# sure npm did not silently skip a native build package (see the script).
+RUN npm ci --no-audit --no-fund --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000 \
+ && node scripts/ensure-native.mjs
 
 FROM node:${NODE_VERSION}-bookworm-slim AS build
 WORKDIR /app
