@@ -1,8 +1,8 @@
 {
-  "name": "@managed-agents/react",
+  "name": "@runhive/react",
   "version": "0.1.0",
   "private": true,
-  "description": "Optional React hooks (useSession, useEvents) for @managed-agents/client.",
+  "description": "Optional React hooks (useSession, useEvents) for @runhive/client.",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.js",
@@ -24,11 +24,11 @@
     "test": "vitest run"
   },
   "peerDependencies": {
-    "@managed-agents/client": "0.1.0",
+    "@runhive/client": "0.1.0",
     "react": "^18.0.0 || ^19.0.0"
   },
   "devDependencies": {
-    "@managed-agents/client": "0.1.0",
+    "@runhive/client": "0.1.0",
     "@testing-library/dom": "10.4.2",
     "@testing-library/react": "16.3.3",
     "@types/node": "22.20.5",

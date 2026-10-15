@@ -1,0 +1,35 @@
+{{- include "runhive.validate" . -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "runhive.configMapName" . }}
+  labels:
+    {{- include "runhive.labels" . | nindent 4 }}
+data:
+  RUNHIVE_BLOB_URL: {{ .Values.config.blobUrl | quote }}
+  {{- with include "runhive.publicUrl" . }}
+  RUNHIVE_PUBLIC_URL: {{ . | quote }}
+  {{- end }}
+  RUNHIVE_SANDBOX_PROVIDER: {{ .Values.config.sandboxProvider | quote }}
+  {{- with .Values.config.e2b.apiUrl }}
+  E2B_API_URL: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.config.e2b.sandboxUrl }}
+  E2B_SANDBOX_URL: {{ . | quote }}
+  {{- end }}
+  RUNHIVE_WORKER_CONCURRENCY: {{ .Values.config.workerConcurrency | quote }}
+  RUNHIVE_LEASE_SECONDS: {{ .Values.config.leaseSeconds | quote }}
+  RUNHIVE_IDLE_PAUSE_SECONDS: {{ .Values.config.idlePauseSeconds | quote }}
+  RUNHIVE_POLL_INTERVAL: {{ .Values.config.pollInterval | quote }}
+  RUNHIVE_MAX_CALL_DEPTH: {{ .Values.config.maxCallDepth | quote }}
+  RUNHIVE_RATE_LIMIT_PER_MINUTE: {{ .Values.config.rateLimitPerMinute | quote }}
+  {{- with .Values.config.aws.region }}
+  AWS_DEFAULT_REGION: {{ . | quote }}
+  AWS_REGION: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.config.aws.endpointUrl }}
+  AWS_ENDPOINT_URL: {{ . | quote }}
+  {{- end }}
+  {{- range $k, $v := .Values.config.extraEnv }}
+  {{ $k }}: {{ $v | quote }}
+  {{- end }}

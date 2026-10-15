@@ -1,5 +1,5 @@
 /**
- * Types for the Managed Agents REST API, taken from the generated OpenAPI
+ * Types for the Runhive REST API, taken from the generated OpenAPI
  * definitions in `api-types.ts` (run `npm run generate` after the spec changes).
  */
 import type { components, paths } from "./api-types";

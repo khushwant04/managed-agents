@@ -1,0 +1,17 @@
+[project]
+name = "runhive-cli"
+version = "0.1.0.dev0"
+description = "The `runhive` command line: dev, apply, deploy, promote, sessions tail."
+requires-python = ">=3.11"
+authors = [{ name = "Khushwant Sanwalot" }]
+dependencies = ["runhive", "runhive-server"]
+
+[project.scripts]
+runhive = "runhive_cli.main:main"
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/runhive_cli"]

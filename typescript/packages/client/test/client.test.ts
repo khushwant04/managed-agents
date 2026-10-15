@@ -76,9 +76,9 @@ describe('request()', () => {
 });
 
 describe('configuration', () => {
-  it('reads AGENTS_BASE_URL and AGENTS_API_KEY', async () => {
-    vi.stubEnv('AGENTS_BASE_URL', 'https://env.example.com/');
-    vi.stubEnv('AGENTS_API_KEY', 'ak_env');
+  it('reads RUNHIVE_BASE_URL and RUNHIVE_API_KEY', async () => {
+    vi.stubEnv('RUNHIVE_BASE_URL', 'https://env.example.com/');
+    vi.stubEnv('RUNHIVE_API_KEY', 'ak_env');
     const { fetch, calls } = mockFetch(() => json({ deployments: [] }));
     const c = new Client({ fetch });
     expect(c.baseURL).toBe('https://env.example.com');
@@ -88,14 +88,14 @@ describe('configuration', () => {
   });
 
   it('defaults to localhost:8080 without a key, and explicit options win', async () => {
-    vi.stubEnv('AGENTS_BASE_URL', '');
-    vi.stubEnv('AGENTS_API_KEY', '');
+    vi.stubEnv('RUNHIVE_BASE_URL', '');
+    vi.stubEnv('RUNHIVE_API_KEY', '');
     const { fetch, calls } = mockFetch(() => json({ secrets: [] }));
     const c = new Client({ fetch });
     expect(c.baseURL).toBe('http://localhost:8080');
     await c.secrets.list();
     expect(calls[0]!.headers.has('authorization')).toBe(false);
-    vi.stubEnv('AGENTS_API_KEY', 'ak_env');
+    vi.stubEnv('RUNHIVE_API_KEY', 'ak_env');
     await new Client({ fetch, apiKey: 'ak_explicit', headers: { 'X-Trace': '1' } }).secrets.list();
     expect(calls[1]!.headers.get('authorization')).toBe('Bearer ak_explicit');
     expect(calls[1]!.headers.get('x-trace')).toBe('1');

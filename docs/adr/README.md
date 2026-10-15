@@ -29,11 +29,11 @@ Statuses: `Proposed` · `Accepted` · `Rejected` · `Deprecated` · `Superseded 
 | [0012](0012-python-first-typescript-generated.md) | Python SDK first; TypeScript client generated from OpenAPI | Accepted |
 | [0013](0013-skills-as-versioned-folders.md) | Skills as versioned folders with progressive loading | Accepted |
 | [0014](0014-tool-approvals-as-policy.md) | Tool approvals as declarative policy that pauses the run | Accepted |
-| [0015](0015-package-and-install-names.md) | Package and install names | Proposed |
+| [0015](0015-package-and-install-names.md) | Package and install names: Runhive | Accepted |
 | [0016](0016-license.md) | License | Proposed |
 | [0017](0017-flagship-demo.md) | Flagship demo | Proposed |
 | [0018](0018-durable-resume-by-deterministic-replay.md) | Durable resume by deterministic replay of keyed steps | Accepted |
 | [0019](0019-child-runs-execute-inline.md) | Child runs from call_agent and spawn_subagent execute inline | Accepted |
 | [0020](0020-approval-expression-language.md) | The approval `when` expression language | Accepted |
 
-ADRs 0015 to 0017 and 0005 track the [open questions](../roadmap.md#open-questions) in the plan; each states a recommendation and must be decided before v0.1. The implementation follows the recommendations of ADR-0005 (Postgres queue) and ADR-0017 (incident-investigator demo). It still uses the placeholder `agents` import and package names, so accepting ADR-0015's fresh namespace means a rename, and accepting ADR-0016 means adding a `LICENSE` file.
+ADRs 0015 to 0017 and 0005 track the [open questions](../roadmap.md#open-questions) in the plan; each states a recommendation and must be decided before v0.1. The implementation follows the recommendations of ADR-0005 (Postgres queue) and ADR-0017 (incident-investigator demo). ADR-0015 is accepted: the project is named Runhive, and the code uses it for every package, import and command. Accepting ADR-0016 means adding a `LICENSE` file.

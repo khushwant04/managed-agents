@@ -13,7 +13,7 @@ Agents change often (instructions, tools, models). Running sessions, traffic spl
 
 The registry is the source of truth: everything that runs is a registered, immutable version reached through an alias.
 
-- `agents apply agent.yaml` or `POST /v1/agents` registers a definition. The registry validates the schema, checks capability manifests (ADR-0003), resolves tool and skill references, and stores an immutable version **keyed by content hash**.
+- `runhive apply agent.yaml` or `POST /v1/agents` registers a definition. The registry validates the schema, checks capability manifests (ADR-0003), resolves tool and skill references, and stores an immutable version **keyed by content hash**.
 - Re-registering an identical definition is a no-op; any change creates version N+1.
 - **Aliases** (`prod`, `staging`, `canary`) point at one or more versions, optionally with weights. Promote moves the pointer; rollback moves it back. Every move is audited.
 - Each version publishes an **agent card** (name, description, input schema, skills, endpoint), which can follow the A2A agent-card format for interoperability.
@@ -22,7 +22,7 @@ The registry is the source of truth: everything that runs is a registered, immut
 ## Alternatives considered
 
 - **Mutable agents with history.** Simpler API, but "what ran" becomes a timestamp lookup and splits between versions become awkward.
-- **Git as the registry.** Good for YAML-in-repo users, but excludes API and SDK registration; YAML-in-repo remains supported through `agents apply`.
+- **Git as the registry.** Good for YAML-in-repo users, but excludes API and SDK registration; YAML-in-repo remains supported through `runhive apply`.
 
 ## Consequences
 

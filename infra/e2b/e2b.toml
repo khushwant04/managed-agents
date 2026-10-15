@@ -1,4 +1,4 @@
-# Legacy E2B CLI config for the `agents-base` template.
+# Legacy E2B CLI config for the `runhive-base` template.
 #
 # The current, verified build path is the Template SDK: `build_template.py`
 # (see README.md). This file only serves the legacy CLI flow
@@ -10,7 +10,7 @@
 # (and `team_id`) back into this file; commit those so later builds update
 # the same template instead of creating a new one.
 
-template_name = "agents-base"
+template_name = "runhive-base"
 dockerfile = "Dockerfile"
 cpu_count = 2
 memory_mb = 2048

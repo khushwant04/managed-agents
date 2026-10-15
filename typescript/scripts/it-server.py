@@ -1,4 +1,4 @@
-"""Throwaway managed-agents server for the TypeScript integration tests.
+"""Throwaway Runhive server for the TypeScript integration tests.
 
 Starts a private Postgres cluster (initdb/pg_ctl, as the ``postgres`` user when run
 as root), migrates it, bootstraps the admin key ``ak_it_admin``, registers a model
@@ -6,7 +6,7 @@ as root), migrates it, bootstraps the admin key ``ak_it_admin``, registers a mod
 and serves the API with uvicorn. Everything is removed on exit (Ctrl-C / SIGTERM).
 
     .venv/bin/python typescript/scripts/it-server.py --port 8765 &
-    AGENTS_IT_BASE_URL=http://127.0.0.1:8765 AGENTS_IT_API_KEY=ak_it_admin \\
+    RUNHIVE_IT_BASE_URL=http://127.0.0.1:8765 RUNHIVE_IT_API_KEY=ak_it_admin \\
         npm --prefix typescript run test:integration
 
 Set ``TEST_DATABASE_URL`` to use an existing Postgres instead of starting one.
@@ -34,15 +34,15 @@ from typing import Any
 import asyncpg
 import uvicorn
 
-from agents.adapters import AdapterRegistry
-from agents.sandbox.local import LocalSandboxProvider
-from agents.testing import ScriptedAdapter, text
-from agents_server.api import create_app
-from agents_server.auth import bootstrap
-from agents_server.blobs import FileBlobStore
-from agents_server.config import Settings
-from agents_server.db import create_pool, migrate
-from agents_server.services import Services
+from runhive.adapters import AdapterRegistry
+from runhive.sandbox.local import LocalSandboxProvider
+from runhive.testing import ScriptedAdapter, text
+from runhive_server.api import create_app
+from runhive_server.auth import bootstrap
+from runhive_server.blobs import FileBlobStore
+from runhive_server.config import Settings
+from runhive_server.db import create_pool, migrate
+from runhive_server.services import Services
 
 ADMIN_KEY = "ak_it_admin"
 

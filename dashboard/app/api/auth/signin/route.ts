@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   const cfg = config();
   const base = resolveUpstream(cfg, typeof body.serverUrl === "string" ? body.serverUrl : null);
   if (!base) {
-    return fail(400, "bad_request", "that server is not on this dashboard's allowlist (AGENTS_API_URL_ALLOWLIST)");
+    return fail(400, "bad_request", "that server is not on this dashboard's allowlist (RUNHIVE_API_URL_ALLOWLIST)");
   }
 
   let res: Response;

@@ -1,8 +1,8 @@
 name: E2B setup check (E2B Embed)
 
 # Boots a self-hosted E2B runtime (E2B Embed, https://github.com/e2b-dev/runtime)
-# on the runner, builds the agents-base template on it, and runs Embed's own
-# smoke test followed by `agents e2b check`: real Firecracker sandboxes driven
+# on the runner, builds the runhive-base template on it, and runs Embed's own
+# smoke test followed by `runhive e2b check`: real Firecracker sandboxes driven
 # through this repo's E2B provider and built-in tools.
 #
 # Embed needs Linux with KVM, the nbd module and spare RAM for hugepages. E2B's
@@ -22,7 +22,7 @@ on:
   pull_request:
     paths:
       - infra/e2b/**
-      - packages/agents/src/agents/sandbox/e2b*.py
+      - packages/runhive/src/runhive/sandbox/e2b*.py
       - .github/workflows/e2b-embed.yml
 
 permissions:
@@ -39,7 +39,7 @@ env:
 
 jobs:
   embed:
-    name: E2B Embed + agents e2b check
+    name: E2B Embed + runhive e2b check
     runs-on: ${{ vars.E2B_EMBED_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 60
     steps:
@@ -84,18 +84,18 @@ jobs:
       - name: Install
         run: uv sync --locked
 
-      - name: Build the agents-base template on Embed
+      - name: Build the runhive-base template on Embed
         env:
           E2B_TEMPLATE_MEMORY_MB: "1024"
         run: uv run --no-project --with 'e2b>=2' python infra/e2b/build_template.py
 
-      - name: agents e2b check
-        run: uv run agents e2b check --egress
+      - name: runhive e2b check
+        run: uv run runhive e2b check --egress
 
       - name: Live E2B test
         env:
           E2B_CHECK_EGRESS: "1"
-        run: uv run pytest -q -m live packages/agents/tests/test_e2b_check.py
+        run: uv run pytest -q -m live packages/runhive/tests/test_e2b_check.py
 
       - name: Embed logs on failure
         if: failure()

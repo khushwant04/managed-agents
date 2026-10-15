@@ -1,8 +1,8 @@
 {
-  "title": "Managed Agents",
-  "uid": "managed-agents",
+  "title": "Runhive",
+  "uid": "runhive",
   "tags": [
-    "managed-agents"
+    "runhive"
   ],
   "schemaVersion": 39,
   "time": {
@@ -53,7 +53,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "agents_queue_depth",
+          "expr": "runhive_queue_depth",
           "legendFormat": ""
         }
       ],
@@ -91,7 +91,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (stop_reason) (rate(agents_runs_total[5m])) * 60",
+          "expr": "sum by (stop_reason) (rate(runhive_runs_total[5m])) * 60",
           "legendFormat": ""
         }
       ]
@@ -212,7 +212,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (kind) (rate(agents_tokens_total[5m])) * 60",
+          "expr": "sum by (kind) (rate(runhive_tokens_total[5m])) * 60",
           "legendFormat": ""
         }
       ]
@@ -249,7 +249,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "agents_cache_hit_ratio",
+          "expr": "runhive_cache_hit_ratio",
           "legendFormat": ""
         }
       ],
@@ -287,7 +287,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(agents_tool_calls_total{outcome=\"error\"}[5m])) / clamp_min(sum(rate(agents_tool_calls_total[5m])), 1e-9)",
+          "expr": "sum(rate(runhive_tool_calls_total{outcome=\"error\"}[5m])) / clamp_min(sum(rate(runhive_tool_calls_total[5m])), 1e-9)",
           "legendFormat": ""
         }
       ]
@@ -324,7 +324,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (model, kind) (rate(agents_provider_errors_total[5m])) * 60",
+          "expr": "sum by (model, kind) (rate(runhive_provider_errors_total[5m])) * 60",
           "legendFormat": ""
         }
       ],
@@ -362,7 +362,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "increase(agents_sessions_resumed_total[1h])",
+          "expr": "increase(runhive_sessions_resumed_total[1h])",
           "legendFormat": ""
         }
       ]
@@ -399,7 +399,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (status) (rate(agents_http_requests_total[5m]))",
+          "expr": "sum by (status) (rate(runhive_http_requests_total[5m]))",
           "legendFormat": ""
         }
       ]

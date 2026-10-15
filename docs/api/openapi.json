@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Managed Agents",
+    "title": "Runhive",
     "description": "Register agents, route requests to versions, and run them durably on your own infrastructure.",
     "version": "0.1.0"
   },
@@ -4786,7 +4786,7 @@
           "template": {
             "type": "string",
             "title": "Template",
-            "default": "agents-base"
+            "default": "runhive-base"
           },
           "timeout_s": {
             "type": "integer",

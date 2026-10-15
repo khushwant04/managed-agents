@@ -844,7 +844,7 @@ export interface components {
             provider: "local" | "docker" | "e2b";
             /**
              * Template
-             * @default agents-base
+             * @default runhive-base
              */
             template: string;
             /**

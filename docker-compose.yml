@@ -4,16 +4,16 @@
 #   docker compose up --build                # or: make dev
 #   docker compose up --scale worker=3       # more workers
 #
-#   API:   http://localhost:8080   (admin key: $AGENTS_BOOTSTRAP_KEY, default ak_dev_admin)
+#   API:   http://localhost:8080   (admin key: $RUNHIVE_BOOTSTRAP_KEY, default ak_dev_admin)
 #   MinIO: http://localhost:9001   (console; minioadmin / minioadmin)
 #
 # Sandboxes
-#   The default sandbox provider is E2B (AGENTS_SANDBOX_PROVIDER=e2b, needs E2B_API_KEY).
+#   The default sandbox provider is E2B (RUNHIVE_SANDBOX_PROVIDER=e2b, needs E2B_API_KEY).
 #   For Docker sandboxes on this machine instead, layer the override file, which
 #   switches the provider, builds the worker with the docker CLI and mounts the
 #   host's Docker socket into the worker only:
 #
-#     make sandbox-image                      # builds agents-base:latest
+#     make sandbox-image                      # builds runhive-base:latest
 #     DOCKER_GID=$(stat -c %g /var/run/docker.sock) \
 #       docker compose -f docker-compose.yml -f deploy/compose/docker-sandbox.yml up --build
 #
@@ -22,24 +22,24 @@
 #
 # Everything marked DEV ONLY must be replaced outside a laptop.
 
-name: managed-agents
+name: runhive
 
-x-agents-env: &agents-env
+x-runhive-env: &runhive-env
   DATABASE_URL: postgresql://agents:agents@postgres:5432/agents
-  AGENTS_PUBLIC_URL: ${AGENTS_PUBLIC_URL:-http://localhost:8080}
-  AGENTS_BLOB_URL: s3://agents/
+  RUNHIVE_PUBLIC_URL: ${RUNHIVE_PUBLIC_URL:-http://localhost:8080}
+  RUNHIVE_BLOB_URL: s3://agents/
   AWS_ENDPOINT_URL: http://minio:9000
   AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
   AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
   AWS_DEFAULT_REGION: us-east-1
   # DEV ONLY default: a fixed, public key. Generate a real one with
   #   python -c "import os, base64; print(base64.b64encode(os.urandom(32)).decode())"
-  AGENTS_MASTER_KEY: ${AGENTS_MASTER_KEY:-ZGV2LW9ubHktbWFzdGVyLWtleS1OT1QtU0VDUkVUISE=}
-  AGENTS_SANDBOX_PROVIDER: ${AGENTS_SANDBOX_PROVIDER:-e2b}
-  AGENTS_WORKER_CONCURRENCY: ${AGENTS_WORKER_CONCURRENCY:-8}
-  AGENTS_LEASE_SECONDS: ${AGENTS_LEASE_SECONDS:-30}
-  AGENTS_IDLE_PAUSE_SECONDS: ${AGENTS_IDLE_PAUSE_SECONDS:-300}
-  AGENTS_RATE_LIMIT_PER_MINUTE: ${AGENTS_RATE_LIMIT_PER_MINUTE:-600}
+  RUNHIVE_MASTER_KEY: ${RUNHIVE_MASTER_KEY:-ZGV2LW9ubHktbWFzdGVyLWtleS1OT1QtU0VDUkVUISE=}
+  RUNHIVE_SANDBOX_PROVIDER: ${RUNHIVE_SANDBOX_PROVIDER:-e2b}
+  RUNHIVE_WORKER_CONCURRENCY: ${RUNHIVE_WORKER_CONCURRENCY:-8}
+  RUNHIVE_LEASE_SECONDS: ${RUNHIVE_LEASE_SECONDS:-30}
+  RUNHIVE_IDLE_PAUSE_SECONDS: ${RUNHIVE_IDLE_PAUSE_SECONDS:-300}
+  RUNHIVE_RATE_LIMIT_PER_MINUTE: ${RUNHIVE_RATE_LIMIT_PER_MINUTE:-600}
   # Provider keys, passed through from your shell or .env (empty if unset).
   E2B_API_KEY: ${E2B_API_KEY:-}
   # A self-hosted E2B runtime (E2B Embed, https://github.com/e2b-dev/runtime);
@@ -49,12 +49,12 @@ x-agents-env: &agents-env
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
   OPENAI_API_KEY: ${OPENAI_API_KEY:-}
 
-x-agents-service: &agents-service
-  image: ${AGENTS_IMAGE:-managed-agents-server:dev}
+x-runhive-service: &runhive-service
+  image: ${RUNHIVE_IMAGE:-runhive-server:dev}
   build:
     context: .
     dockerfile: Dockerfile
-  environment: *agents-env
+  environment: *runhive-env
   restart: unless-stopped
   init: true
 
@@ -78,7 +78,7 @@ services:
 
   # MinIO stopped publishing official minio/minio and minio/mc images; the
   # defaults are the community-maintained pgsty builds. Override with
-  # MINIO_IMAGE / MC_IMAGE (any S3-compatible server works for AGENTS_BLOB_URL).
+  # MINIO_IMAGE / MC_IMAGE (any S3-compatible server works for RUNHIVE_BLOB_URL).
   minio:
     image: ${MINIO_IMAGE:-pgsty/minio:RELEASE.2026-08-04T00-00-00Z}
     command: ["server", "/data", "--console-address", ":9001"]
@@ -114,7 +114,7 @@ services:
     restart: "no"
 
   migrate:
-    <<: *agents-service
+    <<: *runhive-service
     command: ["migrate"]
     depends_on:
       postgres:
@@ -124,13 +124,13 @@ services:
     restart: "no"
 
   gateway:
-    <<: *agents-service
+    <<: *runhive-service
     command: ["serve", "--host", "0.0.0.0", "--port", "8080"]
     environment:
-      <<: *agents-env
+      <<: *runhive-env
       # DEV ONLY: creates org/project "default" with this admin key at startup.
       # Set only on the gateway so services don't race to create the same org.
-      AGENTS_BOOTSTRAP_KEY: ${AGENTS_BOOTSTRAP_KEY:-ak_dev_admin}
+      RUNHIVE_BOOTSTRAP_KEY: ${RUNHIVE_BOOTSTRAP_KEY:-ak_dev_admin}
     ports:
       - "${GATEWAY_PORT:-8080}:8080"
     depends_on:
@@ -140,7 +140,7 @@ services:
         condition: service_completed_successfully
 
   worker:
-    <<: *agents-service
+    <<: *runhive-service
     command: ["worker"]
     # No published ports or container_name, so `--scale worker=N` works.
     healthcheck:
@@ -151,7 +151,7 @@ services:
         condition: service_healthy
 
   scheduler:
-    <<: *agents-service
+    <<: *runhive-service
     command: ["scheduler"]
     healthcheck:
       disable: true
@@ -164,7 +164,7 @@ services:
   #   build:
   #     context: ./dashboard
   #   environment:
-  #     AGENTS_API_URL: http://gateway:8080
+  #     RUNHIVE_API_URL: http://gateway:8080
   #   ports:
   #     - "${DASHBOARD_PORT:-3000}:3000"
   #   depends_on:

@@ -13,7 +13,7 @@ Agents run shell commands, edit files and execute code they wrote. That code is 
 
 Each session gets its own sandbox through a `SandboxProvider` interface. **E2B is the default provider** (a Firecracker microVM per sandbox); a **Docker provider** exists for local development.
 
-- Sandboxes are created from a template `agents-base` (Ubuntu, bash, Python, Node, git) built from a Dockerfile in the repo.
+- Sandboxes are created from a template `runhive-base` (Ubuntu, bash, Python, Node, git) built from a Dockerfile in the repo.
 - Workers drive the sandbox through the provider's command and file APIs. Because the harness is ours, nothing agent-specific runs inside the sandbox.
 - Layout: skills in `/workspace/skills`, inputs in `/workspace/inputs`, outputs in `/workspace/outputs` (synced to object storage on `artifact.created` and at idle), memory in `/workspace/memory`.
 - Idle sessions pause the sandbox where the plan supports it; otherwise `/workspace` is snapshotted and restored into a new sandbox on the next input.

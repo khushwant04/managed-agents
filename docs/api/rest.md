@@ -1,6 +1,6 @@
 # Server REST API (v1)
 
-The server publishes an OpenAPI spec, checked in at [openapi.json](openapi.json) and regenerated with `agents-server openapi`; the TypeScript client and its types are generated from it ([ADR-0012](../adr/0012-python-first-typescript-generated.md)). All requests authenticate with `Authorization: Bearer $AGENTS_API_KEY`, scoped to a project. Roles: `viewer` (read), `developer` (register, deploy, invoke, steer), `admin` (secrets, keys, policy, audit).
+The server publishes an OpenAPI spec, checked in at [openapi.json](openapi.json) and regenerated with `runhive-server openapi`; the TypeScript client and its types are generated from it ([ADR-0012](../adr/0012-python-first-typescript-generated.md)). All requests authenticate with `Authorization: Bearer $RUNHIVE_API_KEY`, scoped to a project. Roles: `viewer` (read), `developer` (register, deploy, invoke, steer), `admin` (secrets, keys, policy, audit).
 
 ## Endpoints
 
@@ -37,8 +37,8 @@ Errors are JSON: `{"error": "<code>", "message": "..."}`; a rejected agent defin
 ## Invoke
 
 ```bash
-curl -N https://agents.example.com/v1/agents/incident-investigator@prod/invoke \
-  -H "Authorization: Bearer $AGENTS_API_KEY" \
+curl -N https://runhive.example.com/v1/agents/incident-investigator@prod/invoke \
+  -H "Authorization: Bearer $RUNHIVE_API_KEY" \
   -d '{"input": "5xx spike on service-api", "stream": true}'
 ```
 
@@ -67,8 +67,8 @@ The WebSocket at `/v1/sessions/{id}/ws` (key in the `Authorization` header or `?
 | `github` | `X-Hub-Signature-256: sha256=HMAC(secret, body)` |
 | `slack` | `X-Slack-Signature: v0=HMAC(secret, "v0:{ts}:{body}")`, `X-Slack-Request-Timestamp` (5 minute window); answers `url_verification` |
 | `stripe` | `Stripe-Signature: t={ts},v1=HMAC(secret, "{ts}.{body}")` |
-| `generic` | `X-Agents-Signature: t={ts},v1=HMAC(secret, "{ts}.{body}")` |
+| `generic` | `X-Runhive-Signature: t={ts},v1=HMAC(secret, "{ts}.{body}")` |
 
 The trigger's `input` template builds the session input from the payload: `{body}`, `{event}` and dotted paths such as `{issue.title}`.
 
-Tool webhooks (function tools with a `url`) are signed the same way as `generic` and carry `Idempotency-Key`; receivers verify them with `agents.tools.webhook.verify`.
+Tool webhooks (function tools with a `url`) are signed the same way as `generic` and carry `Idempotency-Key`; receivers verify them with `runhive.tools.webhook.verify`.

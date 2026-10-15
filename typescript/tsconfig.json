@@ -6,7 +6,7 @@
     "jsx": "react-jsx",
     "types": ["node"],
     "paths": {
-      "@managed-agents/client": ["./packages/client/src/index.ts"]
+      "@runhive/client": ["./packages/client/src/index.ts"]
     }
   },
   "include": ["packages/*/src", "packages/*/test", "packages/*/vitest.config.ts"]

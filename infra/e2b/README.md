@@ -1,4 +1,4 @@
-# `agents-base` sandbox template
+# `runhive-base` sandbox template
 
 Every session's sandbox starts from this image ([ADR-0006](../../docs/adr/0006-e2b-sandbox-per-session.md)):
 Ubuntu 24.04, bash, Python 3 (+ pip, venv, a writable venv at `/opt/venv` on `PATH`),
@@ -18,11 +18,11 @@ The same `Dockerfile` serves both sandbox providers.
 ## Docker provider (local development)
 
 ```bash
-make sandbox-image            # = docker build -t agents-base:latest infra/e2b
-AGENTS_SANDBOX_PROVIDER=docker agents-server worker
+make sandbox-image            # = docker build -t runhive-base:latest infra/e2b
+RUNHIVE_SANDBOX_PROVIDER=docker runhive-server worker
 ```
 
-`DockerSandboxProvider` uses the `agents-base:latest` image by default and runs
+`DockerSandboxProvider` uses the `runhive-base:latest` image by default and runs
 `sleep <timeout>` as the container command, so the image defines no `CMD`.
 
 ## E2B (production)
@@ -31,16 +31,16 @@ AGENTS_SANDBOX_PROVIDER=docker agents-server worker
 
 E2B's current template system (Template SDK, `e2b>=2`) imports a single-stage
 Dockerfile and builds it on E2B. `e2b` is already a dependency of
-`managed-agents[e2b]`.
+`runhive[e2b]`.
 
 ```bash
 export E2B_API_KEY=e2b_...
-uv run --no-project --with 'e2b>=2' python infra/e2b/build_template.py                 # builds `agents-base`
+uv run --no-project --with 'e2b>=2' python infra/e2b/build_template.py                 # builds `runhive-base`
 uv run --no-project --with 'e2b>=2' python infra/e2b/build_template.py --tag v0.1.0    # extra tag
 uv run --no-project --with 'e2b>=2' python infra/e2b/build_template.py --dry-run       # parse only, no API call
 ```
 
-Options: `--name` (default `agents-base`, or `E2B_TEMPLATE_NAME`), `--cpu` (2),
+Options: `--name` (default `runhive-base`, or `E2B_TEMPLATE_NAME`), `--cpu` (2),
 `--memory-mb` (2048), `--skip-cache`. The release workflow runs this on `v*`
 tags when the `E2B_API_KEY` repository secret is set.
 
@@ -67,7 +67,7 @@ a Dockerfile:
 npm i -g @e2b/cli
 e2b auth login                 # or: export E2B_ACCESS_TOKEN=...
 cd infra/e2b
-e2b template build             # reads e2b.toml (template_name = "agents-base", dockerfile = "Dockerfile")
+e2b template build             # reads e2b.toml (template_name = "runhive-base", dockerfile = "Dockerfile")
 ```
 
 E2B's docs now direct users to migrate (`e2b template migrate`, which generates
@@ -85,7 +85,7 @@ only two more variables next to `E2B_API_KEY`:
 ```bash
 make e2b-embed-up                         # downloads embed/compose pinned to E2B_EMBED_REF, docker compose up
 eval "$(make -s e2b-embed-env)"           # E2B_API_KEY, E2B_API_URL (:3000), E2B_SANDBOX_URL (:3002)
-make e2b-template                         # build agents-base on your install
+make e2b-template                         # build runhive-base on your install
 make e2b-check                            # verify it end to end (below)
 ```
 
@@ -96,14 +96,14 @@ Embed serves plain HTTP, so keep it inside your network.
 
 ## Checking a setup
 
-`agents e2b check` (or `make e2b-check`) verifies that agents will run on an E2B setup, E2B Cloud
+`runhive e2b check` (or `make e2b-check`) verifies that agents will run on an E2B setup, E2B Cloud
 or self-hosted. It goes through the platform's own E2B provider and built-in tools, not just the SDK:
 
 | Check | What it proves |
 | --- | --- |
 | configuration | `E2B_API_KEY` is set, and `E2B_SANDBOX_URL` accompanies `E2B_API_URL` |
 | api reachable | the API answers and accepts the key (`GET /v2/templates`) |
-| template ready | `agents-base` (or `--template`) exists and its build is ready |
+| template ready | `runhive-base` (or `--template`) exists and its build is ready |
 | create sandbox | a sandbox starts from it, with the `/workspace` layout created |
 | workspace layout | `/workspace/{inputs,outputs,skills,memory}` exist and are writable by the sandbox user |
 | toolchain | bash, python3, node and git are present (warnings on a stock template) |
@@ -116,12 +116,12 @@ or self-hosted. It goes through the platform's own E2B provider and built-in too
 Failures print a `FIX:` line. `--json` prints a machine-readable report.
 
 The [`e2b-embed` workflow](../../.github/workflows/e2b-embed.yml) runs all of this in CI: it starts
-Embed on the runner, runs Embed's own smoke test as a baseline, builds `agents-base`, then runs
-`agents e2b check --egress` and the live E2B test. Embed needs KVM, so point the repository
+Embed on the runner, runs Embed's own smoke test as a baseline, builds `runhive-base`, then runs
+`runhive e2b check --egress` and the live E2B test. Embed needs KVM, so point the repository
 variable `E2B_EMBED_RUNNER` at a self-hosted KVM runner, as E2B's own CI does.
 
 ## Using a different template
 
 Sandbox environments choose a template by name (`Environment.template`,
-default `agents-base`). To roll out a new template without affecting running
+default `runhive-base`). To roll out a new template without affecting running
 sessions, build it under a new name or tag and point the environment at it.

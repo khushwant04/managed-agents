@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { StrictMode, type ReactNode } from 'react';
 import { describe, expect, it } from 'vitest';
-import { Client } from '@managed-agents/client';
+import { Client } from '@runhive/client';
 import { useEvents, useSession } from '../src/index.js';
 
 type Wire = Record<string, unknown>;

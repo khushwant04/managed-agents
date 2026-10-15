@@ -6,7 +6,7 @@ This is the heart of the project: a request names an agent, the router resolves 
 
 Decision record: [ADR-0004](../adr/0004-registry-immutable-versions-and-aliases.md).
 
-- `agents apply agent.yaml` or `POST /v1/agents` registers a definition. The registry:
+- `runhive apply agent.yaml` or `POST /v1/agents` registers a definition. The registry:
   1. validates the schema,
   2. checks each model's capability manifest ([ADR-0003](../adr/0003-native-features-through-adapters.md)),
   3. resolves tool and skill references,
@@ -55,8 +55,8 @@ Decision record: [ADR-0007](../adr/0007-routing-model.md).
 Setting a split:
 
 ```bash
-curl -X PUT https://agents.example.com/v1/agents/incident-investigator/aliases/prod \
-  -H "Authorization: Bearer $AGENTS_API_KEY" \
+curl -X PUT https://runhive.example.com/v1/agents/incident-investigator/aliases/prod \
+  -H "Authorization: Bearer $RUNHIVE_API_KEY" \
   -d '{"versions": [{"version": 14, "weight": 90}, {"version": 15, "weight": 10}]}'
 ```
 
@@ -76,8 +76,8 @@ curl -X PUT https://agents.example.com/v1/agents/incident-investigator/aliases/p
 ## Invoking a hosted agent
 
 ```bash
-curl -N https://agents.example.com/v1/agents/incident-investigator@prod/invoke \
-  -H "Authorization: Bearer $AGENTS_API_KEY" \
+curl -N https://runhive.example.com/v1/agents/incident-investigator@prod/invoke \
+  -H "Authorization: Bearer $RUNHIVE_API_KEY" \
   -d '{"input": "5xx spike on service-api", "stream": true}'
 ```
 

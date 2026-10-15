@@ -22,8 +22,8 @@ The tool gateway sends a POST with the validated arguments, an idempotency key a
 Each tool carries `approval: never | always | { when: <expr> }`. A matching call pauses the run (`approval_pending`), emits `tool.approval.requested`, and resumes on an approval event. Same flow for every model ([ADR-0014](../adr/0014-tool-approvals-as-policy.md)).
 
 ```bash
-curl -X POST https://agents.example.com/v1/sessions/$SESSION_ID/events \
-  -H "Authorization: Bearer $AGENTS_API_KEY" \
+curl -X POST https://runhive.example.com/v1/sessions/$SESSION_ID/events \
+  -H "Authorization: Bearer $RUNHIVE_API_KEY" \
   -d '{"type": "tool.approval.decided", "call_id": "call_123", "decision": "approve"}'
 ```
 

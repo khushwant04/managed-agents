@@ -251,7 +251,7 @@ function EnvironmentForm({
   const editing = initial !== null
   const [name, setName] = React.useState(initial?.name ?? "")
   const [provider, setProvider] = React.useState<Provider>(initial?.provider ?? "e2b")
-  const [template, setTemplate] = React.useState(initial?.template ?? "agents-base")
+  const [template, setTemplate] = React.useState(initial?.template ?? "runhive-base")
   const [timeout, setTimeoutS] = React.useState(String(initial?.timeout_s ?? 3600))
   const [cpu, setCpu] = React.useState(initial?.cpu ? String(initial.cpu) : "")
   const [memory, setMemory] = React.useState(initial?.memory_mb ? String(initial.memory_mb) : "")
@@ -367,7 +367,7 @@ function EnvironmentForm({
             <Input
               id="env-template"
               className="font-mono"
-              placeholder={provider === "docker" ? "python:3.12-slim" : "agents-base"}
+              placeholder={provider === "docker" ? "python:3.12-slim" : "runhive-base"}
               value={template}
               onChange={(e) => setTemplate(e.target.value)}
               aria-invalid={!!show("template")}

@@ -1,0 +1,54 @@
+{{- if .Values.ingress.enabled -}}
+{{- $c := dict "root" . "component" "gateway" -}}
+{{- $i := .Values.ingress -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "runhive.fullname" . }}
+  labels:
+    {{- include "runhive.componentLabels" $c | nindent 4 }}
+  {{- if or $i.nginxStreaming $i.annotations }}
+  annotations:
+    {{- if $i.nginxStreaming }}
+    # SSE / WebSocket: keep long-lived streams open and flush events immediately.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: {{ $i.streamTimeoutSeconds | quote }}
+    nginx.ingress.kubernetes.io/proxy-send-timeout: {{ $i.streamTimeoutSeconds | quote }}
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/proxy-body-size: {{ $i.bodySize | quote }}
+    {{- end }}
+    {{- with $i.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+spec:
+  {{- with $i.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- with $i.tls }}
+  tls:
+    {{- range . }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range $i.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType | default "Prefix" }}
+            backend:
+              service:
+                name: {{ include "runhive.componentName" $c }}
+                port:
+                  name: http
+          {{- end }}
+    {{- end }}
+{{- end }}

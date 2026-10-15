@@ -1,7 +1,7 @@
 /**
- * HTTP client for a managed-agents server. Mirrors `agents.client` in the Python SDK.
+ * HTTP client for a Runhive server. Mirrors `runhive.client` in the Python SDK.
  *
- *     const client = new Client({ baseURL: 'https://agents.example.com' }); // reads AGENTS_API_KEY
+ *     const client = new Client({ baseURL: 'https://runhive.example.com' }); // reads RUNHIVE_API_KEY
  *     const { version } = await client.agents.register(spec);
  *     await client.agents.promote(spec.name, version);
  *     const session = await client.invoke('incident-investigator@prod', { input: 'Why did p99 jump?' });
@@ -21,9 +21,9 @@ import type { Event, InvokeAccepted, InvokeBody, InvokeResult } from './types.js
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
 export interface ClientOptions {
-  /** Server URL. Default: `AGENTS_BASE_URL`, else `http://localhost:8080`. */
+  /** Server URL. Default: `RUNHIVE_BASE_URL`, else `http://localhost:8080`. */
   baseURL?: string;
-  /** API key sent as `Authorization: Bearer ...`. Default: `AGENTS_API_KEY` (when `process.env` exists). */
+  /** API key sent as `Authorization: Bearer ...`. Default: `RUNHIVE_API_KEY` (when `process.env` exists). */
   apiKey?: string;
   /** Per-request timeout in milliseconds (default 60 000). For streams it bounds connecting only. */
   timeout?: number;
@@ -217,9 +217,9 @@ export class Client {
   private readonly fetchImpl: FetchLike;
 
   constructor(options: ClientOptions = {}) {
-    this.baseURL = (options.baseURL || env('AGENTS_BASE_URL') || 'http://localhost:8080').replace(/\/+$/, '');
+    this.baseURL = (options.baseURL || env('RUNHIVE_BASE_URL') || 'http://localhost:8080').replace(/\/+$/, '');
     this.timeout = options.timeout ?? 60_000;
-    const key = options.apiKey ?? env('AGENTS_API_KEY');
+    const key = options.apiKey ?? env('RUNHIVE_API_KEY');
     this.headers = { ...(key ? { Authorization: `Bearer ${key}` } : {}), ...options.headers };
     const f = options.fetch;
     if (f) this.fetchImpl = f;

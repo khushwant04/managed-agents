@@ -1,5 +1,7 @@
 # Managed Agents Platform — SDK & Infrastructure Plan
 
+> The project has since been named **Runhive** ([ADR-0015](adr/0015-package-and-install-names.md)): read `agents` imports and packages below as `runhive`, `agents-server` as `runhive-server`, and `AGENTS_*` variables as `RUNHIVE_*`. The plan is otherwise kept as written.
+
 Oct 14, 2026 · @Khushwant
 
 > Source document for this repository. Decisions taken from it are recorded as [ADRs](adr/README.md); the topic docs under [architecture/](architecture/) expand each section.

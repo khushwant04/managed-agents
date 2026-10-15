@@ -1,0 +1,77 @@
+{{- $c := dict "root" . "component" "gateway" -}}
+{{- $v := .Values.gateway -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "runhive.componentName" $c }}
+  labels:
+    {{- include "runhive.componentLabels" $c | nindent 4 }}
+spec:
+  {{- if not $v.autoscaling.enabled }}
+  replicas: {{ $v.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "runhive.componentSelectorLabels" $c | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 25%
+  template:
+    metadata:
+      labels:
+        {{- include "runhive.componentLabels" $c | nindent 8 }}
+        {{- with $v.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        {{- include "runhive.podAnnotations" (dict "root" . "values" $v) | nindent 8 }}
+        {{- if $v.metricsAnnotations }}
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ $v.port | quote }}
+        prometheus.io/path: /metrics
+        {{- end }}
+    spec:
+      {{- include "runhive.podCommon" (dict "root" . "values" $v) | nindent 6 }}
+      terminationGracePeriodSeconds: {{ $v.terminationGracePeriodSeconds }}
+      containers:
+        - name: gateway
+          image: {{ include "runhive.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["serve", "--host", "0.0.0.0", "--port", {{ $v.port | quote }}]
+          ports:
+            - name: http
+              containerPort: {{ $v.port }}
+              protocol: TCP
+          envFrom:
+            {{- include "runhive.envFrom" . | nindent 12 }}
+          env:
+            {{- include "runhive.secretEnv" . | nindent 12 }}
+            # Bootstrap only from the gateway so components don't race to create it.
+            - name: RUNHIVE_BOOTSTRAP_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "runhive.secretName" . }}
+                  key: RUNHIVE_BOOTSTRAP_KEY
+                  optional: true
+          {{- with $v.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $v.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $v.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml $v.resources | nindent 12 }}
+          volumeMounts:
+            {{- include "runhive.volumeMounts" . | nindent 12 }}

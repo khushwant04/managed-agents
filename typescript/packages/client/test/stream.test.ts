@@ -153,7 +153,7 @@ describe('invoke + RemoteSession', () => {
       if (req.path === '/v1/sessions/ses_9') return json({ id: 'ses_9', status: 'waiting_input', last_run: { id: 'run_10', status: 'finished', output: 'ok' } });
       return json({ error: 'not_found' }, 404);
     });
-    const client = new Client({ baseURL: 'https://agents.example.com', fetch });
+    const client = new Client({ baseURL: 'https://runhive.example.com', fetch });
     const session = await client.invoke('incident-investigator@prod', { input: 'Triage new alerts' });
     expect(calls[0]!.body).toEqual({ input: 'Triage new alerts', mode: 'async', metadata: {} });
     expect(session.id).toBe('ses_9');

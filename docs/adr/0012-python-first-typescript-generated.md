@@ -11,10 +11,10 @@ Two SDKs maintained by hand drift apart, and building both before v0.1 risks shi
 
 ## Decision
 
-- **Python ships first** and holds the full runtime: `Agent`, `tool`, `Skill`, the runtime, model adapters, sandbox providers, and `Client` / `AsyncClient`, built on asyncio, httpx and Pydantic. The server (`agents-server`, FastAPI) reuses the same runtime package.
+- **Python ships first** and holds the full runtime: `Agent`, `tool`, `Skill`, the runtime, model adapters, sandbox providers, and `Client` / `AsyncClient`, built on asyncio, httpx and Pydantic. The server (`runhive-server`, FastAPI) reuses the same runtime package.
 - Every call has a sync and an async form.
 - The server publishes an **OpenAPI spec**. The **TypeScript** `Client` and types are **generated from it**, so the SDKs cannot drift. A TypeScript local runtime comes later.
-- One monorepo holds all packages: `agents` (PyPI), `agents-server`, `agents-cli`, `agents` (npm), and optionally `agents-react`.
+- One monorepo holds all packages: `runhive` (PyPI), `runhive-server`, `runhive-cli`, `@runhive/client` (npm), and optionally `@runhive/react`. (The plan used `agents` as a placeholder; [ADR-0015](0015-package-and-install-names.md) settled the names.)
 
 ## Alternatives considered
 

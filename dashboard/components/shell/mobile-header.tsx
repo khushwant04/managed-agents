@@ -11,7 +11,7 @@ export function MobileHeader() {
       <SidebarTrigger className="-ml-0.5" />
       <Link href="/" className="flex items-center gap-2 font-heading text-[15px] font-semibold tracking-tight">
         <LogoMark className="size-6 rounded-md [&_svg]:size-3.5" />
-        Managed Agents
+        Runhive
       </Link>
     </header>
   )

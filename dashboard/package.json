@@ -1,5 +1,5 @@
 {
-  "name": "@managed-agents/dashboard",
+  "name": "@runhive/dashboard",
   "version": "0.1.0",
   "type": "module",
   "private": true,
@@ -45,7 +45,7 @@
     "typescript": "5.9.3",
     "vitest": "5.0.4"
   },
-  "description": "Dashboard for Managed Agents: agents, versions, aliases, deployments, playground, live session timelines and replay, usage and audit.",
+  "description": "Dashboard for Runhive: agents, versions, aliases, deployments, playground, live session timelines and replay, usage and audit.",
   "engines": {
     "node": ">=22.12.0"
   }

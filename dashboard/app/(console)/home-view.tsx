@@ -223,7 +223,7 @@ export function HomeView() {
           <EmptyState
             icon={<BotIcon />}
             title="No agents yet"
-            description="Register one with `agents apply` or from a template in the playground."
+            description="Register one with `runhive apply` or from a template in the playground."
             action={
               <Button render={<Link href="/playground" />}>
                 <FlaskConicalIcon data-icon="inline-start" />

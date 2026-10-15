@@ -4,11 +4,11 @@ name: Release
 #   1. build sdists + wheels for the three workspace packages and publish them
 #      to PyPI with trusted publishing (no API token);
 #   2. build and push the server image to GHCR;
-#   3. build the `agents-base` E2B sandbox template.
+#   3. build the `runhive-base` E2B sandbox template.
 #
 # One-time setup:
-#   - PyPI: add a trusted publisher for each of managed-agents,
-#     managed-agents-server and managed-agents-cli (owner khushwant04, repo
+#   - PyPI: add a trusted publisher for each of runhive,
+#     runhive-server and runhive-cli (owner khushwant04, repo
 #     managed-agents, workflow release.yml, environment pypi).
 #   - GitHub: create the `pypi` environment (optionally with required reviewers).
 #   - E2B: set the E2B_API_KEY secret (Template SDK). E2B_ACCESS_TOKEN alone
@@ -29,7 +29,7 @@ permissions:
 
 env:
   UV_VERSION: "0.11.32"
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/managed-agents-server
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/runhive-server
   PUBLISH: ${{ github.event_name == 'push' || inputs.publish }}
 
 jobs:
@@ -47,7 +47,7 @@ jobs:
         run: |
           tag="${GITHUB_REF_NAME#v}"
           status=0
-          for p in packages/agents packages/agents-server packages/agents-cli; do
+          for p in packages/runhive packages/runhive-server packages/runhive-cli; do
             v=$(python3 -c "import sys, tomllib; print(tomllib.load(open(sys.argv[1], 'rb'))['project']['version'])" "$p/pyproject.toml")
             if [ "$v" != "$tag" ]; then
               echo "::error file=$p/pyproject.toml::version $v does not match tag $GITHUB_REF_NAME"
@@ -117,7 +117,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=server-release
 
   e2b-template:
-    name: E2B template (agents-base)
+    name: E2B template (runhive-base)
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || inputs.publish
     env:
@@ -133,7 +133,7 @@ jobs:
         run: |
           if [ -n "$E2B_API_KEY" ]; then
             # Template SDK (verified API): parses infra/e2b/Dockerfile, builds on E2B.
-            uv run --no-project --with 'e2b>=2' python infra/e2b/build_template.py --name agents-base
+            uv run --no-project --with 'e2b>=2' python infra/e2b/build_template.py --name runhive-base
           elif [ -n "$E2B_ACCESS_TOKEN" ]; then
             # Legacy CLI flow from infra/e2b/e2b.toml (unverified; see infra/e2b/README.md).
             cd infra/e2b

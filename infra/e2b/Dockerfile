@@ -1,9 +1,9 @@
-# agents-base: the sandbox template every session starts from (ADR-0006).
+# runhive-base: the sandbox template every session starts from (ADR-0006).
 #
 # Used two ways:
-#   - E2B:    built into the `agents-base` template (see README.md / build_template.py)
-#   - Docker: `docker build -t agents-base:latest infra/e2b` for the Docker
-#             sandbox provider (AGENTS_SANDBOX_PROVIDER=docker)
+#   - E2B:    built into the `runhive-base` template (see README.md / build_template.py)
+#   - Docker: `docker build -t runhive-base:latest infra/e2b` for the Docker
+#             sandbox provider (RUNHIVE_SANDBOX_PROVIDER=docker)
 #
 # Keep this file single-stage and free of COPY/ADD: E2B's Dockerfile import
 # supports one FROM only, ignores RUN --mount, and this keeps the template

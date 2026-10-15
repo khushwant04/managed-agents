@@ -18,8 +18,8 @@ function snippet(provider: WebhookProvider, url: string): string | null {
     ``,
     `curl -X POST ${url} \\`,
     `  -H "Content-Type: application/json" \\`,
-    `  -H "X-Agents-Event: ticket.created" \\`,
-    `  -H "X-Agents-Signature: t=$ts,v1=$sig" \\`,
+    `  -H "X-Runhive-Event: ticket.created" \\`,
+    `  -H "X-Runhive-Signature: t=$ts,v1=$sig" \\`,
     `  -d "$body"`,
   ].join("\n")
 }

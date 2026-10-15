@@ -28,8 +28,8 @@ sys.path.insert(0, str(HERE))
 import observability  # noqa: E402
 from agent import investigator  # noqa: E402
 
-from agents import Agent, Sandbox  # noqa: E402
-from agents.adapters import AdapterRegistry  # noqa: E402
+from runhive import Agent, Sandbox  # noqa: E402
+from runhive.adapters import AdapterRegistry  # noqa: E402
 
 
 @dataclass
@@ -125,7 +125,7 @@ def table(results: list[Result]) -> str:
 
 def scripted_registry() -> AdapterRegistry:
     """A canned investigation, to exercise the harness without API keys."""
-    from agents.testing import ScriptedAdapter, call, calls, text
+    from runhive.testing import ScriptedAdapter, call, calls, text
 
     report = (
         "# Incident report\\n\\n## Summary\\nservice-api 5xx came from checkout-api after deploy-4821.\\n\\n"

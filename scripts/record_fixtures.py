@@ -14,10 +14,10 @@ import asyncio
 import json
 from pathlib import Path
 
-from agents.tools.builtins import builtin
-from agents.types import Message, ModelRequest
+from runhive.tools.builtins import builtin
+from runhive.types import Message, ModelRequest
 
-FIXTURES = Path(__file__).resolve().parent.parent / "packages" / "agents" / "tests" / "fixtures"
+FIXTURES = Path(__file__).resolve().parent.parent / "packages" / "runhive" / "tests" / "fixtures"
 
 
 def _dump(event: object) -> dict:
@@ -36,12 +36,12 @@ async def record(vendor: str, name: str, prompt: str, model: str | None, tools: 
         max_tokens=4096,
     )
     if vendor == "anthropic":
-        from agents.adapters.anthropic import AnthropicAdapter
+        from runhive.adapters.anthropic import AnthropicAdapter
 
         adapter = AnthropicAdapter()
         stream = await adapter.client.beta.messages.create(stream=True, **adapter.build_params(req))
     elif vendor == "openai":
-        from agents.adapters.openai import OpenAIAdapter
+        from runhive.adapters.openai import OpenAIAdapter
 
         adapter = OpenAIAdapter()
         stream = await adapter.client.responses.create(stream=True, **adapter.build_params(req))

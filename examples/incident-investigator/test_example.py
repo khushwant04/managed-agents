@@ -43,14 +43,14 @@ def test_agent_definition_and_hosted_spec():
 async def test_tools_server_checks_signatures(monkeypatch):
     import tools_server
 
-    from agents.tools.webhook import sign
+    from runhive.tools.webhook import sign
 
     monkeypatch.setattr(tools_server, "SECRET", "s3cret")
     body = json.dumps({"tool": "lookup_deploys", "arguments": {"service": "checkout-api"}}).encode()
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=tools_server.app), base_url="http://t") as c:
-        bad = await c.post("/tools/lookup_deploys", content=body, headers={"X-Agents-Signature": "t=1,v1=00"})
+        bad = await c.post("/tools/lookup_deploys", content=body, headers={"X-Runhive-Signature": "t=1,v1=00"})
         assert bad.status_code == 401
         ok = await c.post(
-            "/tools/lookup_deploys", content=body, headers={"X-Agents-Signature": sign("s3cret", body, int(time.time()))}
+            "/tools/lookup_deploys", content=body, headers={"X-Runhive-Signature": sign("s3cret", body, int(time.time()))}
         )
         assert ok.json()["result"][0]["id"] == "deploy-4821"

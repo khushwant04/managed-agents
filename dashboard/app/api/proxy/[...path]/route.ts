@@ -4,7 +4,7 @@ import { FORWARD_REQUEST_HEADERS, FORWARD_RESPONSE_HEADERS, SSE_PREAMBLE, isSame
 import { credentialsFrom } from "@/lib/server/auth";
 
 /**
- * Same-origin proxy to the Managed Agents API. The browser never sees the API
+ * Same-origin proxy to the Runhive API. The browser never sees the API
  * key: it is read from the httpOnly cookie and added here. Response bodies are
  * streamed through untouched, so `/v1/sessions/{id}/stream` (SSE) and artifact
  * downloads are not buffered.

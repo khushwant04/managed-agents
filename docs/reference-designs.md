@@ -6,7 +6,7 @@ Neither product is used at runtime ([ADR-0002](adr/0002-own-the-harness-inferenc
 
 | Dimension | [Claude Managed Agents](https://platform.claude.com/docs/en/managed-agents/overview) | [OpenAI Agents API](https://developers.openai.com/api/docs/guides/agents-api/overview) |
 | --- | --- | --- |
-| Status | Beta, header `managed-agents-2026-04-01` | Public beta since Sep 10, 2026, header `OpenAI-Beta: agents=v1` |
+| Status | Beta, header `runhive-2026-04-01` | Public beta since Sep 10, 2026, header `OpenAI-Beta: agents=v1` |
 | Core objects | Agent, Environment, Session, Events | Agent, Environment, Session, Events and items |
 | Harness | Anthropic harness with caching and compaction | Open-source Codex harness, run by OpenAI |
 | Agent definition | Created once, referenced by ID | Inline on the session or stored and reused |

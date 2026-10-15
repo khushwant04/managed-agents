@@ -1,0 +1,44 @@
+{{- if .Values.keda.enabled -}}
+{{- $c := dict "root" . "component" "worker" -}}
+{{- $k := .Values.keda -}}
+# KEDA reads the connection string from the same Secret the workers use.
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: {{ include "runhive.componentName" $c }}
+  labels:
+    {{- include "runhive.componentLabels" $c | nindent 4 }}
+spec:
+  secretTargetRef:
+    - parameter: connection
+      name: {{ include "runhive.secretName" . }}
+      key: DATABASE_URL
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "runhive.componentName" $c }}
+  labels:
+    {{- include "runhive.componentLabels" $c | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "runhive.componentName" $c }}
+  pollingInterval: {{ $k.pollingInterval }}
+  cooldownPeriod: {{ $k.cooldownPeriod }}
+  minReplicaCount: {{ $k.minReplicaCount }}
+  maxReplicaCount: {{ $k.maxReplicaCount }}
+  {{- with $k.advanced }}
+  advanced:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  triggers:
+    - type: postgresql
+      metadata:
+        query: {{ $k.query | quote }}
+        targetQueryValue: {{ $k.targetQueryValue | quote }}
+        activationTargetQueryValue: {{ $k.activationTargetQueryValue | quote }}
+      authenticationRef:
+        name: {{ include "runhive.componentName" $c }}
+{{- end }}

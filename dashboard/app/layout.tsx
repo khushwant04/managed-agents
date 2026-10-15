@@ -11,7 +11,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 const fontMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 export const metadata: Metadata = {
-  title: { default: "Managed Agents", template: "%s · Managed Agents" },
+  title: { default: "Runhive", template: "%s · Runhive" },
   description: "Register, route, host and observe agents.",
 }
 

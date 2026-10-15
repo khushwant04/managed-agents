@@ -3,9 +3,9 @@
 UV            ?= uv
 DOCKER        ?= docker
 COMPOSE       ?= $(DOCKER) compose
-IMAGE         ?= managed-agents-server:dev
-SANDBOX_IMAGE ?= agents-base:latest
-HELM_CHART    ?= deploy/helm/managed-agents
+IMAGE         ?= runhive-server:dev
+SANDBOX_IMAGE ?= runhive-base:latest
+HELM_CHART    ?= deploy/helm/runhive
 
 .DEFAULT_GOAL := help
 .PHONY: help install lint test test-live dev dev-docker down logs image sandbox-image openapi helm-lint e2b-template e2b-check e2b-embed-up e2b-embed-env e2b-embed-down
@@ -41,14 +41,14 @@ logs: ## Follow logs of the local stack
 image: ## Build the server image
 	$(DOCKER) build -t $(IMAGE) .
 
-sandbox-image: ## Build the sandbox image (agents-base:latest) for the Docker provider
+sandbox-image: ## Build the sandbox image (runhive-base:latest) for the Docker provider
 	$(DOCKER) build -t $(SANDBOX_IMAGE) infra/e2b
 
-e2b-template: ## Build the agents-base E2B template (needs E2B_API_KEY; E2B_API_URL for self-hosted)
+e2b-template: ## Build the runhive-base E2B template (needs E2B_API_KEY; E2B_API_URL for self-hosted)
 	$(UV) run --no-project --with 'e2b>=2' python infra/e2b/build_template.py
 
 e2b-check: ## Check the E2B setup end to end (E2B Cloud, or E2B_API_URL/E2B_SANDBOX_URL for self-hosted)
-	$(UV) run agents e2b check $(E2B_CHECK_ARGS)
+	$(UV) run runhive e2b check $(E2B_CHECK_ARGS)
 
 # E2B Embed: the whole E2B runtime on this Linux host (needs KVM; see infra/e2b/README.md).
 E2B_EMBED_REF ?= 50fc41af77ff0877d4224e5e4ded5e7f308b5476
@@ -66,7 +66,7 @@ e2b-embed-down: ## Stop E2B Embed (keeps its data; add V=1 to remove it)
 	cd $(E2B_EMBED_DIR) && $(DOCKER) compose down $(if $(V),-v,)
 
 openapi: ## Regenerate docs/api/openapi.json
-	$(UV) run agents-server openapi > docs/api/openapi.json.tmp && mv docs/api/openapi.json.tmp docs/api/openapi.json
+	$(UV) run runhive-server openapi > docs/api/openapi.json.tmp && mv docs/api/openapi.json.tmp docs/api/openapi.json
 
 helm-lint: ## Lint and render the Helm chart with its CI values
 	helm dependency build $(HELM_CHART)

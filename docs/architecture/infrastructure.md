@@ -38,11 +38,11 @@ RETURNING *;
 
 Decision record: [ADR-0006](../adr/0006-e2b-sandbox-per-session.md).
 
-- One sandbox per session from a template `agents-base` (Ubuntu, bash, Python, Node, git), built from a Dockerfile in the repo.
+- One sandbox per session from a template `runhive-base` (Ubuntu, bash, Python, Node, git), built from a Dockerfile in the repo.
 - Because the harness is ours, workers drive the sandbox through E2B's command and file APIs; nothing agent-specific runs inside it.
 - Skills are copied to `/workspace/skills`, inputs to `/workspace/inputs`; `/workspace/outputs` syncs to object storage on `artifact.created` and at idle.
 - Idle sessions pause the sandbox where the E2B plan supports it, otherwise snapshot `/workspace` and restore into a new sandbox on the next input.
-- E2B Cloud or self-hosted: the same provider works against a self-hosted E2B runtime such as [E2B Embed](https://github.com/e2b-dev/runtime) through `E2B_API_URL` and `E2B_SANDBOX_URL`. `agents e2b check` verifies a setup end to end, and the `e2b-embed` CI workflow runs that check against a real Embed install ([infra/e2b](../../infra/e2b/README.md#checking-a-setup)).
+- E2B Cloud or self-hosted: the same provider works against a self-hosted E2B runtime such as [E2B Embed](https://github.com/e2b-dev/runtime) through `E2B_API_URL` and `E2B_SANDBOX_URL`. `runhive e2b check` verifies a setup end to end, and the `e2b-embed` CI workflow runs that check against a real Embed install ([infra/e2b](../../infra/e2b/README.md#checking-a-setup)).
 
 ```text
 /workspace
@@ -61,6 +61,6 @@ Decision record: [ADR-0006](../adr/0006-e2b-sandbox-per-session.md).
 
 ## Deployment
 
-- **Local:** `docker compose up` starts gateway, worker, Postgres, MinIO and dashboard. `agents dev` runs gateway, worker and a Docker sandbox locally.
+- **Local:** `docker compose up` starts gateway, worker, Postgres, MinIO and dashboard. `runhive dev` runs gateway, worker and a Docker sandbox locally.
 - **Kubernetes (Helm chart):** gateway Deployment with HPA; worker Deployment scaled by KEDA on queue depth; external or bundled Postgres; Ingress with long read timeouts for SSE.
 - **CI (GitHub Actions):** lint, tests on recorded responses, nightly live tests, PyPI publish (npm once the TypeScript SDK ships) and E2B template build on tags.

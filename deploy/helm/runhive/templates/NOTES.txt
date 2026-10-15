@@ -1,0 +1,43 @@
+runhive {{ .Chart.AppVersion }} is installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+{{- $gw := include "runhive.componentName" (dict "root" . "component" "gateway") }}
+
+Components:
+  gateway    Deployment/{{ $gw }}{{ if .Values.gateway.autoscaling.enabled }} (HPA {{ .Values.gateway.autoscaling.minReplicas }}-{{ .Values.gateway.autoscaling.maxReplicas }} on CPU){{ end }}
+  worker     Deployment/{{ include "runhive.componentName" (dict "root" . "component" "worker") }}{{ if .Values.keda.enabled }} (KEDA {{ .Values.keda.minReplicaCount }}-{{ .Values.keda.maxReplicaCount }} on queued runs){{ end }}
+  scheduler  Deployment/{{ include "runhive.componentName" (dict "root" . "component" "scheduler") }}
+  database   {{ if .Values.postgresql.enabled }}bundled Postgres ({{ include "runhive.postgresql.host" . }}){{ else if .Values.secrets.existingSecret }}DATABASE_URL from Secret/{{ .Values.secrets.existingSecret }}{{ else }}external (externalDatabase.url){{ end }}
+  sandboxes  {{ .Values.config.sandboxProvider }}
+
+1. Reach the API:
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+     http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}/
+{{- end }}
+{{- else }}
+     kubectl -n {{ .Release.Namespace }} port-forward svc/{{ $gw }} 8080:{{ .Values.gateway.service.port }}
+     curl http://localhost:8080/healthz
+{{- end }}
+
+2. Get an admin API key:
+{{- if .Values.secrets.bootstrapKey }}
+     The gateway created org/project "default" with secrets.bootstrapKey as an
+     admin key. Rotate it once you have created your own keys.
+{{- else }}
+     kubectl -n {{ .Release.Namespace }} exec deploy/{{ $gw }} -- runhive-server bootstrap --org default --project default
+{{- end }}
+
+3. Metrics: GET /metrics on the gateway (Prometheus), including runhive_queue_depth.
+{{- if not .Values.keda.enabled }}
+
+Workers run a fixed {{ .Values.worker.replicaCount }} replicas. Install KEDA and set keda.enabled=true to
+scale them on queue depth.
+{{- end }}
+{{- if and (eq .Values.config.sandboxProvider "e2b") (not .Values.secrets.existingSecret) (not .Values.secrets.e2bApiKey) }}
+
+WARNING: config.sandboxProvider is e2b but secrets.e2bApiKey is empty; sessions
+that need a sandbox will fail until E2B_API_KEY is provided.
+{{- end }}
+{{- if and (not .Values.secrets.existingSecret) (not .Values.secrets.anthropicApiKey) (not .Values.secrets.openaiApiKey) }}
+
+WARNING: no model provider key set (secrets.anthropicApiKey / secrets.openaiApiKey).
+{{- end }}

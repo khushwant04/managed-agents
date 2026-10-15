@@ -24,21 +24,21 @@ export function normalizeBaseUrl(raw: string): string | null {
 }
 
 export interface UpstreamConfig {
-  /** Default upstream (AGENTS_API_URL). */
+  /** Default upstream (RUNHIVE_API_URL). */
   defaultUrl: string;
   /** Every upstream the sign-in form may choose (always includes the default). */
   allowed: string[];
 }
 
 /**
- * Reads AGENTS_API_URL (default http://localhost:8080) and the optional
- * comma-separated AGENTS_API_URL_ALLOWLIST of extra servers users may pick at
+ * Reads RUNHIVE_API_URL (default http://localhost:8080) and the optional
+ * comma-separated RUNHIVE_API_URL_ALLOWLIST of extra servers users may pick at
  * sign-in. Anything else is refused so the dashboard can't be used to reach
  * arbitrary hosts.
  */
 export function upstreamConfig(env: Record<string, string | undefined>): UpstreamConfig {
-  const defaultUrl = normalizeBaseUrl(env.AGENTS_API_URL || "http://localhost:8080") ?? "http://localhost:8080";
-  const extra = (env.AGENTS_API_URL_ALLOWLIST ?? "")
+  const defaultUrl = normalizeBaseUrl(env.RUNHIVE_API_URL || "http://localhost:8080") ?? "http://localhost:8080";
+  const extra = (env.RUNHIVE_API_URL_ALLOWLIST ?? "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean)

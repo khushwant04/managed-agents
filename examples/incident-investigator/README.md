@@ -14,7 +14,7 @@ deploy and a later `search` deploy) separate investigation from guessing.
 
 ```bash
 export ANTHROPIC_API_KEY=...   # and/or OPENAI_API_KEY
-uv run agents run examples/incident-investigator/agent.py \
+uv run runhive run examples/incident-investigator/agent.py \
   "$(jq -r .alert examples/incident-investigator/scenarios/5xx_spike.json)" --outputs outputs/
 cat outputs/report.md
 ```
@@ -25,11 +25,11 @@ cat outputs/report.md
 
 ```bash
 docker compose up -d                                            # gateway, worker, scheduler, Postgres, MinIO
-export AGENTS_BASE_URL=http://localhost:8080 AGENTS_API_KEY=ak_dev_admin
-TOOLS_URL=http://tools:9000 uv run agents apply examples/incident-investigator/agent.py --promote prod
-uv run agents deploy incident-investigator --http --webhook generic --cron "*/30 * * * *" --input "Check error budgets"
+export RUNHIVE_BASE_URL=http://localhost:8080 RUNHIVE_API_KEY=ak_dev_admin
+TOOLS_URL=http://tools:9000 uv run runhive apply examples/incident-investigator/agent.py --promote prod
+uv run runhive deploy incident-investigator --http --webhook generic --cron "*/30 * * * *" --input "Check error budgets"
 TOOL_SIGNING_SECRET=<webhook secret printed by deploy> uv run uvicorn tools_server:app --app-dir examples/incident-investigator --port 9000
-uv run agents invoke incident-investigator@prod "service-api 5xx rate above 5% for 10 minutes"
+uv run runhive invoke incident-investigator@prod "service-api 5xx rate above 5% for 10 minutes"
 ```
 
 ### The chaos demo
@@ -43,7 +43,7 @@ docker compose kill worker && docker compose up -d worker
 The run's lease expires, the new worker claims it, and the session resumes from its last completed
 step; completed tool calls are not repeated (the event stream shows `session.status` with
 `resumed: true`). The same scenario runs in CI as
-`packages/agents-server/tests/test_worker.py::test_worker_killed_mid_run_is_resumed_by_another`.
+`packages/runhive-server/tests/test_worker.py::test_worker_killed_mid_run_is_resumed_by_another`.
 
 ## Benchmark Claude and GPT
 

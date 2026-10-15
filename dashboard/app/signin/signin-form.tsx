@@ -74,7 +74,7 @@ export function SignInForm({
           <div className="flex flex-col gap-4">
             <LogoMark />
             <div className="flex flex-col gap-1.5">
-              <h1 className="text-2xl font-semibold tracking-tight">Sign in to Managed Agents</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">Sign in to Runhive</h1>
               <p className="text-sm text-muted-foreground">
                 Use a project API key. It stays in an httpOnly cookie on this dashboard&apos;s server and never reaches the page.
               </p>
@@ -154,7 +154,7 @@ export function SignInForm({
                   <Input id="server-url" value={serverUrl} readOnly aria-readonly="true" className="font-mono text-xs text-muted-foreground" />
                 )}
                 <FieldDescription>
-                  {allowed.length > 1 ? "One of the servers this dashboard allows." : "Set by AGENTS_API_URL."}
+                  {allowed.length > 1 ? "One of the servers this dashboard allows." : "Set by RUNHIVE_API_URL."}
                 </FieldDescription>
               </Field>
               <Button type="submit" size="lg" className="h-10 w-full" disabled={pending || !apiKey.trim()}>
@@ -167,7 +167,7 @@ export function SignInForm({
 
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <ShieldCheckIcon className="size-3.5" />
-            Create keys with <code className="rounded bg-muted px-1 py-0.5 text-[11px]">agents keys create</code> or the API keys page.
+            Create keys with <code className="rounded bg-muted px-1 py-0.5 text-[11px]">runhive keys create</code> or the API keys page.
           </p>
         </motion.div>
       </div>

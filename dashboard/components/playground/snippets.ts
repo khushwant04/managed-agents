@@ -16,20 +16,20 @@ export function snippet(lang: Language, target: string, input: string, baseUrl: 
       const body = JSON.stringify({ input: text, mode: "async" }).replaceAll("'", "'\\''")
       return [
         `curl ${baseUrl.replace(/\/$/, "")}/v1/agents/${encodeURIComponent(target).replace("%40", "@")}/invoke \\`,
-        `  -H "Authorization: Bearer $AGENTS_API_KEY" \\`,
+        `  -H "Authorization: Bearer $RUNHIVE_API_KEY" \\`,
         `  -H "Content-Type: application/json" \\`,
         `  -d '${body}'`,
         ``,
         `# then follow the events:`,
         `# curl -N ${baseUrl.replace(/\/$/, "")}/v1/sessions/<session_id>/stream?until_settled=true \\`,
-        `#   -H "Authorization: Bearer $AGENTS_API_KEY"`,
+        `#   -H "Authorization: Bearer $RUNHIVE_API_KEY"`,
       ].join("\n")
     }
     case "python":
       return [
-        `from agents import Client`,
+        `from runhive import Client`,
         ``,
-        `client = Client()  # reads AGENTS_BASE_URL and AGENTS_API_KEY`,
+        `client = Client()  # reads RUNHIVE_BASE_URL and RUNHIVE_API_KEY`,
         ``,
         `session = client.invoke(${JSON.stringify(target)}, ${literal})`,
         `for ev in session.events():`,
@@ -38,9 +38,9 @@ export function snippet(lang: Language, target: string, input: string, baseUrl: 
       ].join("\n")
     case "typescript":
       return [
-        `import { Client } from "@managed-agents/client"`,
+        `import { Client } from "@runhive/client"`,
         ``,
-        `const client = new Client() // reads AGENTS_BASE_URL and AGENTS_API_KEY`,
+        `const client = new Client() // reads RUNHIVE_BASE_URL and RUNHIVE_API_KEY`,
         ``,
         `const session = await client.invoke(${JSON.stringify(target)}, {`,
         `  input: ${literal},`,

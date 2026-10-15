@@ -28,7 +28,7 @@ export const PROVIDER_LABEL: Record<WebhookProvider, string> = {
   generic: "Generic",
 };
 
-/** How each provider signs deliveries (mirrors agents_server.triggers.verify_webhook). */
+/** How each provider signs deliveries (mirrors runhive_server.triggers.verify_webhook). */
 export const PROVIDER_SIGNING: Record<WebhookProvider, { header: string; scheme: string; event: string; setup: string }> = {
   github: {
     header: "X-Hub-Signature-256",
@@ -49,9 +49,9 @@ export const PROVIDER_SIGNING: Record<WebhookProvider, { header: string; scheme:
     setup: "Dashboard → Developers → Webhooks → Add endpoint. Paste the URL, then copy the endpoint's signing secret (whsec_…) into this deployment.",
   },
   generic: {
-    header: "X-Agents-Signature (event name in X-Agents-Event)",
+    header: "X-Runhive-Signature (event name in X-Runhive-Event)",
     scheme: "t={timestamp},v1=HMAC-SHA256(secret, \"{timestamp}.{body}\")",
-    event: "X-Agents-Event header, else \"event\"",
+    event: "X-Runhive-Event header, else \"event\"",
     setup: "Sign each request yourself with the scheme below. Timestamps older than five minutes are rejected.",
   },
 };

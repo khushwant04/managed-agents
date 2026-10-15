@@ -84,7 +84,7 @@ function Brand() {
       {!iconMode ? (
         <Link href="/" className="flex min-w-0 flex-1 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring">
           <LogoMark className="size-6 rounded-md [&_svg]:size-3.5" />
-          <span className="truncate font-heading text-[15px] font-semibold tracking-tight">Managed Agents</span>
+          <span className="truncate font-heading text-[15px] font-semibold tracking-tight">Runhive</span>
         </Link>
       ) : null}
       <Tooltip>

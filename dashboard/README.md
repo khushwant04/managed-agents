@@ -1,6 +1,6 @@
-# Managed Agents dashboard
+# Runhive dashboard
 
-The web console for a Managed Agents server, in the style of the Claude Console and the OpenAI platform. Use it to register and version agents, try them in a playground, deploy them behind HTTP, webhooks, cron and queues, follow sessions live, and keep an eye on usage, keys and audit logs. It talks only to the REST API ([`docs/api/rest.md`](../docs/api/rest.md), [`openapi.json`](../docs/api/openapi.json)).
+The web console for a Runhive server, in the style of the Claude Console and the OpenAI platform. Use it to register and version agents, try them in a playground, deploy them behind HTTP, webhooks, cron and queues, follow sessions live, and keep an eye on usage, keys and audit logs. It talks only to the REST API ([`docs/api/rest.md`](../docs/api/rest.md), [`openapi.json`](../docs/api/openapi.json)).
 
 ![Dashboard home](docs/dashboard.png)
 
@@ -10,7 +10,7 @@ It is a Next.js 16 App Router app scaffolded with `npx shadcn@latest init --pres
 
 | Page | What it does |
 | --- | --- |
-| **Sign in** | Paste a project API key; it is checked with `GET /v1/project`. The server is `AGENTS_API_URL`, or one picked from `AGENTS_API_URL_ALLOWLIST`. |
+| **Sign in** | Paste a project API key; it is checked with `GET /v1/project`. The server is `RUNHIVE_API_URL`, or one picked from `RUNHIVE_API_URL_ALLOWLIST`. |
 | **Dashboard** | Greeting, sessions this week, token volume and prompt-cache share with count-up numbers, a 7/30-day token chart, the latest agents as artwork cards, recent sessions and quick starts. |
 | **API keys** | Create keys (shown once), list and revoke them (from the audit log), and copy cURL, Python and TypeScript snippets for this server. |
 | **Playground** | Pick an agent and alias, write the input and run it with Ctrl/⌘+Enter; output streams in over SSE with tool calls and token usage. **Code** shows the same request as cURL, Python or TypeScript. Six templates register a starter agent in one click. |
@@ -73,14 +73,14 @@ The browser never sees the API key.
    - Bodies are streamed. For SSE the proxy disables buffering and sends a comment first so headers flush immediately.
 3. **Expiry.** A 401 sends the browser back to `/signin?expired=1`.
 
-The upstream can only be `AGENTS_API_URL` or an entry in `AGENTS_API_URL_ALLOWLIST`, re-checked on every request.
+The upstream can only be `RUNHIVE_API_URL` or an entry in `RUNHIVE_API_URL_ALLOWLIST`, re-checked on every request.
 
 ## Configuration
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `AGENTS_API_URL` | `http://localhost:8080` | The Managed Agents API to proxy to. |
-| `AGENTS_API_URL_ALLOWLIST` | (empty) | Comma-separated extra API URLs offered at sign-in. |
+| `RUNHIVE_API_URL` | `http://localhost:8080` | The Runhive API to proxy to. |
+| `RUNHIVE_API_URL_ALLOWLIST` | (empty) | Comma-separated extra API URLs offered at sign-in. |
 | `DASHBOARD_INSECURE_COOKIES` | (unset) | `1` drops the cookie `Secure` flag even over HTTPS; only for debugging behind a proxy without `X-Forwarded-Proto`. |
 | `PORT` / `HOSTNAME` | `3000` / `0.0.0.0` (image) | Where the standalone server listens. |
 
@@ -91,7 +91,7 @@ Node 22.12 or later.
 ```bash
 cd dashboard
 npm install
-npm run dev           # http://localhost:3000, AGENTS_API_URL=http://localhost:8080 by default
+npm run dev           # http://localhost:3000, RUNHIVE_API_URL=http://localhost:8080 by default
 ```
 
 | Script | |
@@ -109,7 +109,7 @@ To try it without model keys, run the throwaway server the TypeScript integratio
 
 ```bash
 .venv/bin/python typescript/scripts/it-server.py --port 8765 &
-AGENTS_API_URL=http://127.0.0.1:8765 npm --prefix dashboard run dev
+RUNHIVE_API_URL=http://127.0.0.1:8765 npm --prefix dashboard run dev
 ```
 
 ### Layout
@@ -141,8 +141,8 @@ lib/
 ## Docker
 
 ```bash
-docker build -t managed-agents-dashboard dashboard
-docker run --rm -p 3000:3000 -e AGENTS_API_URL=http://gateway:8080 managed-agents-dashboard
+docker build -t runhive-dashboard dashboard
+docker run --rm -p 3000:3000 -e RUNHIVE_API_URL=http://gateway:8080 runhive-dashboard
 ```
 
 The image runs `node server.js` from Next's standalone output as the unprivileged `node` user. Put it behind your ingress with TLS and long read timeouts so session streams stay open. The build downloads the Inter and Geist Mono fonts through `next/font`, so it needs network access.

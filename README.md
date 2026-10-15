@@ -1,8 +1,8 @@
-# Managed Agents
+# Runhive
 
 [![CI](https://github.com/khushwant04/managed-agents/actions/workflows/ci.yml/badge.svg)](https://github.com/khushwant04/managed-agents/actions/workflows/ci.yml)
 
-An open-source, self-hosted managed-agents platform. Register an agent once, and the platform hosts it, routes every request to the right agent and version, and runs it on its own harness against Claude or OpenAI models, using each model API's native features.
+Runhive is an open-source, self-hosted platform for running AI agents. Register an agent once, and the platform hosts it, routes every request to the right agent and version, and runs it on its own harness against Claude or OpenAI models, using each model API's native features.
 
 > **Status:** v0.1 is implemented but not yet released. Everything below is built and tested on scripted and recorded model responses. Still to do: live runs against the model APIs, the E2B template build, the package-name and license decisions ([ADR-0015](docs/adr/0015-package-and-install-names.md), [ADR-0016](docs/adr/0016-license.md)) and the first release. See the [roadmap](docs/roadmap.md).
 
@@ -13,7 +13,7 @@ An open-source, self-hosted managed-agents platform. Register an agent once, and
 - **Host:** deployments expose agents through HTTP, signed webhooks (GitHub, Slack, Stripe, generic), cron and queue triggers. Sessions stream events over resumable SSE or WebSocket.
 - **Run durably:** the project's own agent loop handles tool calling, parallel tools, steering, interrupts, approvals, subagents, compaction and budgets. Every model and tool call is a checkpointed step, so if a worker dies mid-run, another resumes the session without repeating completed work.
 - **Use native model features:** thin adapters for the Anthropic Messages API (adaptive thinking, prompt caching, server tools, refusal fallback), the OpenAI Responses API (reasoning effort, encrypted reasoning, native shell) and any OpenAI-compatible endpoint. A session can switch vendors between runs.
-- **Sandbox:** each session gets an [E2B](https://e2b.dev) sandbox for shell, files and code, on E2B Cloud or a self-hosted [E2B Embed](https://github.com/e2b-dev/runtime) install; `agents e2b check` verifies either end to end. Docker or a local directory can be used for development.
+- **Sandbox:** each session gets an [E2B](https://e2b.dev) sandbox for shell, files and code, on E2B Cloud or a self-hosted [E2B Embed](https://github.com/e2b-dev/runtime) install; `runhive e2b check` verifies either end to end. Docker or a local directory can be used for development.
 - **Operate:** encrypted secrets that never reach the model or the sandbox; API keys with roles; per-project allowlists and token budgets; an audit log; Prometheus metrics, OpenTelemetry traces and a Grafana dashboard.
 
 Claude Managed Agents and OpenAI's Agents API are reference designs, not dependencies: the project only calls model inference APIs.
@@ -48,7 +48,7 @@ export ANTHROPIC_API_KEY=...              # and/or OPENAI_API_KEY
 **Run an agent locally** with the embedded runtime (no server):
 
 ```python
-from agents import Agent, Sandbox, tool
+from runhive import Agent, Sandbox, tool
 
 @tool(approval={"when": "'rm ' in args.command"})
 def run_check(command: str) -> str:
@@ -71,27 +71,27 @@ for ev in session.events():
 **Host it** with Postgres, MinIO, a gateway, workers and a scheduler:
 
 ```bash
-docker compose up -d                                   # or: make dev; or: uv run agents dev (needs Postgres)
-export AGENTS_BASE_URL=http://localhost:8080 AGENTS_API_KEY=ak_dev_admin
-uv run agents apply examples/incident-investigator/agent.py --promote prod
-uv run agents deploy incident-investigator --http --cron "*/30 * * * *" --input "Check error budgets"
-uv run agents invoke incident-investigator@prod "Why did p99 latency jump?"
-uv run agents promote incident-investigator 2 --canary 10    # 10% of new sessions to v2
+docker compose up -d                                   # or: make dev; or: uv run runhive dev (needs Postgres)
+export RUNHIVE_BASE_URL=http://localhost:8080 RUNHIVE_API_KEY=ak_dev_admin
+uv run runhive apply examples/incident-investigator/agent.py --promote prod
+uv run runhive deploy incident-investigator --http --cron "*/30 * * * *" --input "Check error budgets"
+uv run runhive invoke incident-investigator@prod "Why did p99 latency jump?"
+uv run runhive promote incident-investigator 2 --canary 10    # 10% of new sessions to v2
 ```
 
 **Call it from code:**
 
 ```python
-from agents import Client
+from runhive import Client
 
-client = Client()                                       # AGENTS_BASE_URL, AGENTS_API_KEY
+client = Client()                                       # RUNHIVE_BASE_URL, RUNHIVE_API_KEY
 remote = client.invoke("incident-investigator@prod", "Why did p99 latency jump?")
 for ev in remote.events():                              # same events as a local session
     ...
 ```
 
 ```ts
-import { Client } from '@managed-agents/client';
+import { Client } from '@runhive/client';
 
 const session = await new Client().invoke('incident-investigator@prod', { input: 'Triage new alerts' });
 for await (const ev of session.events()) if (ev.type === 'message.agent.delta') process.stdout.write(ev.text);
@@ -109,15 +109,15 @@ for await (const ev of session.events()) if (ev.type === 'message.agent.delta') 
 
 | Path | What |
 | --- | --- |
-| `packages/agents` | Python SDK and runtime: `Agent`, `tool`, `Skill`, the runner, model adapters, sandbox providers, MCP and webhook tools, `Client` / `AsyncClient` |
-| `packages/agents-server` | Gateway (FastAPI), registry, router, run queue, workers, scheduler, secrets, metrics; the `agents-server` command |
-| `packages/agents-cli` | The `agents` command: `run`, `dev`, `apply`, `deploy`, `promote`, `rollback`, `invoke`, `sessions`, `secrets` |
-| `typescript/` | `@managed-agents/client` (types generated from the OpenAPI spec) and `@managed-agents/react` hooks |
+| `packages/runhive` | Python SDK and runtime: `Agent`, `tool`, `Skill`, the runner, model adapters, sandbox providers, MCP and webhook tools, `Client` / `AsyncClient` |
+| `packages/runhive-server` | Gateway (FastAPI), registry, router, run queue, workers, scheduler, secrets, metrics; the `runhive-server` command |
+| `packages/runhive-cli` | The `runhive` command: `run`, `dev`, `apply`, `deploy`, `promote`, `rollback`, `invoke`, `sessions`, `secrets` |
+| `typescript/` | `@runhive/client` (types generated from the OpenAPI spec) and `@runhive/react` hooks |
 | `dashboard/` | Next.js + shadcn/ui console: playground, agents, versions and aliases, deployments and webhooks, live session traces with approvals and replay, usage, keys, audit |
 | `examples/incident-investigator` | The flagship demo, its tools service and the benchmark |
 | `docker-compose.yml`, `Dockerfile`, `deploy/compose` | Local stack and server image |
 | `deploy/helm`, `deploy/grafana` | Helm chart (HPA gateway, KEDA-scaled workers) and Grafana dashboard |
-| `infra/e2b` | The `agents-base` sandbox template |
+| `infra/e2b` | The `runhive-base` sandbox template |
 | `docs/` | Design plan, architecture, ADRs, API reference (`docs/api/openapi.json`) |
 
 ## Development

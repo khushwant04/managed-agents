@@ -1,5 +1,5 @@
 /**
- * React hooks for @managed-agents/client.
+ * React hooks for @runhive/client.
  *
  *     const { events, status, send } = useSession(client, sessionId);
  *
@@ -7,7 +7,7 @@
  * abort it on unmount or when the session changes.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Client, Event, InterruptResult, Session, SessionEventResult } from '@managed-agents/client';
+import type { Client, Event, InterruptResult, Session, SessionEventResult } from '@runhive/client';
 
 export interface UseEventsOptions {
   /** End the stream when the run settles (default `true`). Call `resume()` to follow the next run. */

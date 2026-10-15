@@ -69,7 +69,7 @@ jobs:
       - name: Pytest (recorded responses; live tests excluded)
         run: >-
           uv run pytest -q -m "not live"
-          --cov=agents.runtime
+          --cov=runhive.runtime
           --cov-report=term-missing
           --cov-report=xml
       - name: Upload coverage report
@@ -91,15 +91,15 @@ jobs:
         with:
           context: .
           push: false
-          tags: managed-agents-server:ci
+          tags: runhive-server:ci
           cache-from: type=gha,scope=server
           cache-to: type=gha,mode=max,scope=server
-      - name: Sandbox image (agents-base)
+      - name: Sandbox image (runhive-base)
         uses: docker/build-push-action@v6
         with:
           context: infra/e2b
           push: false
-          tags: agents-base:ci
+          tags: runhive-base:ci
           cache-from: type=gha,scope=sandbox
           cache-to: type=gha,mode=max,scope=sandbox
       - name: Dashboard image
@@ -107,7 +107,7 @@ jobs:
         with:
           context: dashboard
           push: false
-          tags: managed-agents-dashboard:ci
+          tags: runhive-dashboard:ci
           cache-from: type=gha,scope=dashboard
           cache-to: type=gha,mode=max,scope=dashboard
       - name: Compose file is valid
@@ -122,7 +122,7 @@ jobs:
         with:
           version: v3.16.2
       - name: Lint and render
-        working-directory: deploy/helm/managed-agents
+        working-directory: deploy/helm/runhive
         run: |
           # Docker Hub (Bitnami's OCI registry) rate-limits anonymous pulls; retry.
           for i in 1 2 3; do helm dependency build . && break; sleep $((i * 20)); done
@@ -147,7 +147,7 @@ jobs:
       - run: uv sync --locked
       - name: Regenerate and diff
         run: |
-          uv run agents-server openapi > /tmp/openapi.json
+          uv run runhive-server openapi > /tmp/openapi.json
           diff -u docs/api/openapi.json /tmp/openapi.json || { echo "::error::docs/api/openapi.json is stale; run make openapi"; exit 1; }
 
   typescript:
@@ -165,7 +165,7 @@ jobs:
           cache-dependency-path: typescript/package-lock.json
       - run: npm ci
       - name: Generated types match the spec
-        run: npm run check:generated --workspace @managed-agents/client
+        run: npm run check:generated --workspace @runhive/client
       - run: npm run build
       - run: npx tsc --noEmit
       - run: npm test

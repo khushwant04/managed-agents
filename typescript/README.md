@@ -1,20 +1,20 @@
 # TypeScript SDK
 
-The TypeScript client for a managed-agents server, plus optional React hooks. Its types are **generated from the server's OpenAPI spec** (`docs/api/openapi.json`), so the TypeScript and Python SDKs cannot drift ([ADR-0012](../docs/adr/0012-python-first-typescript-generated.md)). The hand-written client on top mirrors the Python `agents.client` surface and semantics.
+The TypeScript client for a Runhive server, plus optional React hooks. Its types are **generated from the server's OpenAPI spec** (`docs/api/openapi.json`), so the TypeScript and Python SDKs cannot drift ([ADR-0012](../docs/adr/0012-python-first-typescript-generated.md)). The hand-written client on top mirrors the Python `runhive.client` surface and semantics.
 
 | Package | What it is |
 | --- | --- |
-| [`@managed-agents/client`](packages/client) | `fetch`-based client, typed events, SSE streaming with resume. No runtime dependencies. Node 18+ and browsers. |
-| [`@managed-agents/react`](packages/react) | Optional `useSession` and `useEvents` hooks (React 18 or 19). |
+| [`@runhive/client`](packages/client) | `fetch`-based client, typed events, SSE streaming with resume. No runtime dependencies. Node 18+ and browsers. |
+| [`@runhive/react`](packages/react) | Optional `useSession` and `useEvents` hooks (React 18 or 19). |
 
-> **Package names are placeholders.** npm `agents` belongs to Cloudflare, and the final names wait on [ADR-0015](../docs/adr/0015-package-and-install-names.md). Until that ADR is accepted, both packages use the `@managed-agents/*` scope and are marked `"private": true`, so they cannot be published by accident.
+> Both packages use the `@runhive/*` scope ([ADR-0015](../docs/adr/0015-package-and-install-names.md)) and stay `"private": true` until the first release, so they cannot be published by accident.
 
 ## Usage
 
 ```ts
-import { Client } from '@managed-agents/client';
+import { Client } from '@runhive/client';
 
-const client = new Client({ baseURL: 'https://agents.example.com' }); // apiKey defaults to AGENTS_API_KEY
+const client = new Client({ baseURL: 'https://runhive.example.com' }); // apiKey defaults to RUNHIVE_API_KEY
 const session = await client.invoke('incident-investigator@prod', { input: 'Triage new alerts' });
 for await (const ev of session.events()) {
   if (ev.type === 'message.agent.delta') process.stdout.write(ev.text);
@@ -23,8 +23,8 @@ for await (const ev of session.events()) {
 
 `new Client(options)` takes these options:
 
-- `baseURL`: defaults to `AGENTS_BASE_URL`, then `http://localhost:8080`.
-- `apiKey`: defaults to `AGENTS_API_KEY`. The environment is only read when `process.env` exists.
+- `baseURL`: defaults to `RUNHIVE_BASE_URL`, then `http://localhost:8080`.
+- `apiKey`: defaults to `RUNHIVE_API_KEY`. The environment is only read when `process.env` exists.
 - `timeout`: per-request timeout in ms, 60 000 by default. For streams it only bounds connecting.
 - `headers`: extra headers sent with every request.
 - `fetch`: a custom `fetch`.
@@ -96,7 +96,7 @@ Non-2xx responses throw `APIError` with these fields:
 - `code`: the server's error code, such as `not_found` or `invalid_definition`.
 
 ```ts
-import { APIError } from '@managed-agents/client';
+import { APIError } from '@runhive/client';
 try {
   await client.agents.register(spec);
 } catch (err) {
@@ -111,7 +111,7 @@ The client uses `fetch` streams rather than `EventSource`, so the `Authorization
 ### React
 
 ```tsx
-import { useSession } from '@managed-agents/react';
+import { useSession } from '@runhive/react';
 
 function Chat({ client, sessionId }) {
   const { events, status, pendingApprovals, send, approve } = useSession(client, sessionId);
@@ -141,7 +141,7 @@ npm run check:generated   # fail if schema.ts is stale (CI)
 
 ### How regeneration works
 
-1. The server's spec is exported to `docs/api/openapi.json` (`agents-server openapi > docs/api/openapi.json`).
+1. The server's spec is exported to `docs/api/openapi.json` (`runhive-server openapi > docs/api/openapi.json`).
 2. `npm run generate` runs [`openapi-typescript`](https://openapi-ts.dev) at a pinned version, `7.13.0`. It writes `packages/client/src/generated/schema.ts`, which defines `paths`, `components` and `operations`. The generated file is committed.
 3. The hand-written client in `packages/client/src` uses those types in two ways:
    - Public types such as `Session`, `Deployment` and `Event` are aliases of the generated schemas.
@@ -152,11 +152,11 @@ Generation uses `--default-non-nullable false`. Without that flag, openapi-types
 
 ### Integration tests
 
-`packages/client/test/integration.test.ts` talks to a real server. It is skipped unless `AGENTS_IT_BASE_URL` and `AGENTS_IT_API_KEY` are set. `scripts/it-server.py` starts a throwaway server for it. That server runs a private Postgres cluster, migrates it, and creates the admin key `ak_it_admin`. It registers a scripted model that answers every request with "pong", runs a worker with the local sandbox, and serves the API with uvicorn. Everything is removed on exit.
+`packages/client/test/integration.test.ts` talks to a real server. It is skipped unless `RUNHIVE_IT_BASE_URL` and `RUNHIVE_IT_API_KEY` are set. `scripts/it-server.py` starts a throwaway server for it. That server runs a private Postgres cluster, migrates it, and creates the admin key `ak_it_admin`. It registers a scripted model that answers every request with "pong", runs a worker with the local sandbox, and serves the API with uvicorn. Everything is removed on exit.
 
 ```sh
 ../.venv/bin/python scripts/it-server.py --port 8765 &
-AGENTS_IT_BASE_URL=http://127.0.0.1:8765 AGENTS_IT_API_KEY=ak_it_admin npm run test:integration
+RUNHIVE_IT_BASE_URL=http://127.0.0.1:8765 RUNHIVE_IT_API_KEY=ak_it_admin npm run test:integration
 kill %1
 ```
 

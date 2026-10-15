@@ -1,5 +1,5 @@
 /**
- * Errors raised by the client. Mirrors `agents.client.APIError` in the Python SDK.
+ * Errors raised by the client. Mirrors `runhive.client.APIError` in the Python SDK.
  */
 import type { ErrorBody } from './types.js';
 

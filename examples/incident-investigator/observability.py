@@ -1,6 +1,6 @@
 """A fake observability backend for the demo: deploys, metrics and logs from a scenario file.
 
-The same functions back the agent's tools in-process (``agents run``) and the
+The same functions back the agent's tools in-process (``runhive run``) and the
 signed webhook endpoints of ``tools_server.py`` (hosted deployments).
 """
 

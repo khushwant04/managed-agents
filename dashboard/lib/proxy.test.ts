@@ -3,7 +3,7 @@ import { SSE_PREAMBLE, isSameOrigin, prependChunk, normalizeBaseUrl, parseProjec
 
 describe("upstream configuration", () => {
   it("normalises base URLs and rejects unsafe ones", () => {
-    expect(normalizeBaseUrl("https://agents.example.com/")).toBe("https://agents.example.com");
+    expect(normalizeBaseUrl("https://runhive.example.com/")).toBe("https://runhive.example.com");
     expect(normalizeBaseUrl("http://localhost:8080/api//")).toBe("http://localhost:8080/api");
     expect(normalizeBaseUrl("ftp://x")).toBeNull();
     expect(normalizeBaseUrl("https://user:pw@x.com")).toBeNull();
@@ -11,8 +11,8 @@ describe("upstream configuration", () => {
     expect(normalizeBaseUrl("not a url")).toBeNull();
   });
 
-  it("defaults to AGENTS_API_URL and only allows listed overrides", () => {
-    const cfg = upstreamConfig({ AGENTS_API_URL: "http://api:8080/", AGENTS_API_URL_ALLOWLIST: "https://staging.example.com, bogus, http://api:8080" });
+  it("defaults to RUNHIVE_API_URL and only allows listed overrides", () => {
+    const cfg = upstreamConfig({ RUNHIVE_API_URL: "http://api:8080/", RUNHIVE_API_URL_ALLOWLIST: "https://staging.example.com, bogus, http://api:8080" });
     expect(cfg).toEqual({ defaultUrl: "http://api:8080", allowed: ["http://api:8080", "https://staging.example.com"] });
     expect(resolveUpstream(cfg, "")).toBe("http://api:8080");
     expect(resolveUpstream(cfg, null)).toBe("http://api:8080");

@@ -95,7 +95,7 @@ export function AgentsView() {
         <EmptyState
           icon={<BotIcon />}
           title="No agents yet"
-          description="Register a spec here, push one with `agents apply`, or start from a template in the playground."
+          description="Register a spec here, push one with `runhive apply`, or start from a template in the playground."
           action={
             <div className="flex flex-wrap justify-center gap-2">
               {registerButton}

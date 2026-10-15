@@ -1,12 +1,12 @@
-"""Build the `agents-base` E2B sandbox template from ./Dockerfile.
+"""Build the `runhive-base` E2B sandbox template from ./Dockerfile.
 
 Uses the E2B Template SDK (`e2b>=2`, already a dependency of
-`managed-agents[e2b]`), which imports a single-stage Dockerfile and builds it
+`runhive[e2b]`), which imports a single-stage Dockerfile and builds it
 on E2B's infrastructure. Authenticates with `E2B_API_KEY`.
 
     uv run --no-project --with 'e2b>=2' python infra/e2b/build_template.py               # build + publish
     uv run --no-project --with 'e2b>=2' python infra/e2b/build_template.py --dry-run     # parse only, no API calls
-    python infra/e2b/build_template.py --name agents-base --tag v0.1.0
+    python infra/e2b/build_template.py --name runhive-base --tag v0.1.0
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    p.add_argument("--name", default=os.environ.get("E2B_TEMPLATE_NAME", "agents-base"))
+    p.add_argument("--name", default=os.environ.get("E2B_TEMPLATE_NAME", "runhive-base"))
     p.add_argument(
         "--tag", action="append", default=[], help="extra tag(s), e.g. the release version"
     )

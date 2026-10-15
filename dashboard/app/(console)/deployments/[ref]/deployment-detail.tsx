@@ -347,7 +347,7 @@ function InvokeCard({ deployment: d, server }: { deployment: Deployment; server:
   const url = `${server}/v1/deployments/${seg(d.name)}/invoke`
   const curl = [
     `curl${mode === "stream" ? " -N" : ""} -X POST ${url} \\`,
-    `  -H "Authorization: Bearer $AGENTS_API_KEY" \\`,
+    `  -H "Authorization: Bearer $RUNHIVE_API_KEY" \\`,
     `  -H "Content-Type: application/json" \\`,
     `  -d '{"input": "Hello!", "mode": "${mode}"}'`,
   ].join("\n")

@@ -1,8 +1,8 @@
 /**
  * End-to-end tests against a real server. Skipped unless both are set:
  *
- *   AGENTS_IT_BASE_URL  e.g. http://127.0.0.1:8765
- *   AGENTS_IT_API_KEY   e.g. ak_it_admin
+ *   RUNHIVE_IT_BASE_URL  e.g. http://127.0.0.1:8765
+ *   RUNHIVE_IT_API_KEY   e.g. ak_it_admin
  *
  * `typescript/scripts/it-server.py` starts a suitable throwaway server whose model
  * `scripted` answers every request with "pong".
@@ -10,8 +10,8 @@
 import { describe, expect, it } from 'vitest';
 import { APIError, Client, type Event } from '../src/index.js';
 
-const baseURL = process.env.AGENTS_IT_BASE_URL;
-const apiKey = process.env.AGENTS_IT_API_KEY;
+const baseURL = process.env.RUNHIVE_IT_BASE_URL;
+const apiKey = process.env.RUNHIVE_IT_API_KEY;
 const enabled = Boolean(baseURL && apiKey);
 
 const suffix = Math.random().toString(36).slice(2, 8);

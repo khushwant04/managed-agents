@@ -2,12 +2,12 @@
 #
 # Dashboard image (Next.js standalone output).
 #
-#   docker build -t managed-agents-dashboard dashboard
-#   docker run --rm -p 3000:3000 -e AGENTS_API_URL=http://gateway:8080 managed-agents-dashboard
+#   docker build -t runhive-dashboard dashboard
+#   docker run --rm -p 3000:3000 -e RUNHIVE_API_URL=http://gateway:8080 runhive-dashboard
 #
 # Environment:
-#   AGENTS_API_URL             the Managed Agents API the dashboard proxies to (default http://localhost:8080)
-#   AGENTS_API_URL_ALLOWLIST   optional comma-separated extra API URLs users may pick at sign-in
+#   RUNHIVE_API_URL             the Runhive API the dashboard proxies to (default http://localhost:8080)
+#   RUNHIVE_API_URL_ALLOWLIST   optional comma-separated extra API URLs users may pick at sign-in
 #   DASHBOARD_INSECURE_COOKIES set to 1 only to drop the Secure flag when TLS is terminated elsewhere without X-Forwarded-Proto
 #
 # lib/api-types.ts is committed (generated from docs/api/openapi.json by `npm run generate`),
@@ -33,7 +33,7 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
-    AGENTS_API_URL=http://localhost:8080
+    RUNHIVE_API_URL=http://localhost:8080
 COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 USER node

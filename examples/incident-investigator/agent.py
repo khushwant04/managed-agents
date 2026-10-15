@@ -2,12 +2,12 @@
 
 Run locally (embedded runtime, local sandbox):
 
-    agents run examples/incident-investigator/agent.py "$(jq -r .alert examples/incident-investigator/scenarios/5xx_spike.json)"
+    runhive run examples/incident-investigator/agent.py "$(jq -r .alert examples/incident-investigator/scenarios/5xx_spike.json)"
 
 Deploy (the tools become signed webhooks served by tools_server.py):
 
-    TOOLS_URL=https://tools.example.com agents apply examples/incident-investigator/agent.py --promote prod
-    agents deploy incident-investigator --http --webhook generic --cron "*/30 * * * *" --input "Check error budgets"
+    TOOLS_URL=https://tools.example.com runhive apply examples/incident-investigator/agent.py --promote prod
+    runhive deploy incident-investigator --http --webhook generic --cron "*/30 * * * *" --input "Check error budgets"
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import observability  # noqa: E402
 
-from agents import Agent, tool  # noqa: E402
+from runhive import Agent, tool  # noqa: E402
 
 TOOLS_URL = os.environ.get("TOOLS_URL")  # hosted: where tools_server.py runs
 MODELS = os.environ.get("INVESTIGATOR_MODELS", "claude-opus-5-5,gpt-6-astra").split(",")

@@ -2,22 +2,22 @@
 
 Python ships first and holds the full runtime ([ADR-0012](../adr/0012-python-first-typescript-generated.md)). One agent definition runs locally in a script, then registers and deploys to your platform unchanged.
 
-> The import name `agents` and the distribution names below are placeholders until [ADR-0015](../adr/0015-package-and-install-names.md) is decided: `agents` collides with OpenAI's Agents SDK.
+> Every package, import and command is named `runhive` ([ADR-0015](../adr/0015-package-and-install-names.md)); the plan's placeholder `agents` collided with OpenAI's Agents SDK.
 
 ## Packages (one monorepo)
 
 | Package (distribution) | Import | Contents |
 | --- | --- | --- |
-| `managed-agents` | `agents` | `Agent`, `tool`, `Skill`, `Sandbox`, the runtime, model adapters, sandbox providers, MCP and webhook tools, `Client` / `AsyncClient`; asyncio, httpx, Pydantic. Extra `e2b` for E2B sandboxes |
-| `managed-agents-server` | `agents_server` | Gateway, registry, router, workers, scheduler; `agents-server` command. Extras `s3`, `otel` |
-| `managed-agents-cli` | `agents_cli` | The `agents` command |
-| `@managed-agents/client` (npm) | | TypeScript client generated from the OpenAPI spec ([TypeScript SDK](typescript.md)) |
-| `@managed-agents/react` (npm) | | Optional hooks (`useSession`, `useEvents`) |
+| `runhive` | `runhive` | `Agent`, `tool`, `Skill`, `Sandbox`, the runtime, model adapters, sandbox providers, MCP and webhook tools, `Client` / `AsyncClient`; asyncio, httpx, Pydantic. Extra `e2b` for E2B sandboxes |
+| `runhive-server` | `runhive_server` | Gateway, registry, router, workers, scheduler; `runhive-server` command. Extras `s3`, `otel` |
+| `runhive-cli` | `runhive_cli` | The `runhive` command |
+| `@runhive/client` (npm) | | TypeScript client generated from the OpenAPI spec ([TypeScript SDK](typescript.md)) |
+| `@runhive/react` (npm) | | Optional hooks (`useSession`, `useEvents`) |
 
 ## Define, run locally, register, deploy, invoke
 
 ```python
-from agents import Agent, Client, Sandbox, tool
+from runhive import Agent, Client, Sandbox, tool
 from pydantic import BaseModel
 
 class DeployQuery(BaseModel):
@@ -48,7 +48,7 @@ for ev in session.events():
         print(ev.text, end="")
 
 # 2. Register and deploy to your platform
-client = Client(base_url="https://agents.example.com")  # reads AGENTS_API_KEY
+client = Client(base_url="https://runhive.example.com")  # reads RUNHIVE_API_KEY
 version = client.agents.register(investigator).version   # uploads local skills first
 client.deployments.create(
     agent="incident-investigator", alias="prod", version=version,
@@ -89,7 +89,7 @@ def word_count(text: str) -> dict: ...
 def pay(amount: int) -> str: ...
 ```
 
-Schemas come from type hints; a function taking a single Pydantic model receives the validated model. Approval expressions are described in [ADR-0020](../adr/0020-approval-expression-language.md). Webhook receivers verify calls with `agents.tools.webhook.verify(secret, header, body)`.
+Schemas come from type hints; a function taking a single Pydantic model receives the validated model. Approval expressions are described in [ADR-0020](../adr/0020-approval-expression-language.md). Webhook receivers verify calls with `runhive.tools.webhook.verify(secret, header, body)`.
 
 ## Sessions
 
@@ -114,23 +114,23 @@ Every call has a sync and an async form (`Client` / `AsyncClient`, `session.even
 ## CLI
 
 ```bash
-agents run agent.yaml "5xx spike on service-api"            # local run; saves /workspace/outputs
-agents dev                                                  # gateway + worker + scheduler on this machine
-agents apply agent.yaml --promote prod                      # register a version and move an alias
-agents deploy incident-investigator --http --cron "*/30 * * * *" --input "Check error budgets" --webhook github
-agents promote incident-investigator 15 --canary 10         # 10% of new sessions to v15
-agents rollback incident-investigator
-agents invoke incident-investigator@prod "Why did p99 latency jump?"
-agents versions incident-investigator
-agents sessions list | tail <id> | send <id> "text" | approve <id> <call-id> | interrupt <id> | artifacts <id>
-agents deployments list | pause <name> | resume <name> | delete <name>
-agents secrets set OBS_TOKEN < token.txt
+runhive run agent.yaml "5xx spike on service-api"            # local run; saves /workspace/outputs
+runhive dev                                                  # gateway + worker + scheduler on this machine
+runhive apply agent.yaml --promote prod                      # register a version and move an alias
+runhive deploy incident-investigator --http --cron "*/30 * * * *" --input "Check error budgets" --webhook github
+runhive promote incident-investigator 15 --canary 10         # 10% of new sessions to v15
+runhive rollback incident-investigator
+runhive invoke incident-investigator@prod "Why did p99 latency jump?"
+runhive versions incident-investigator
+runhive sessions list | tail <id> | send <id> "text" | approve <id> <call-id> | interrupt <id> | artifacts <id>
+runhive deployments list | pause <name> | resume <name> | delete <name>
+runhive secrets set OBS_TOKEN < token.txt
 ```
 
 Agents can be given as `agent.yaml`, `path/to/file.py[:variable]` or `module:variable`.
 
 ## Testing without API keys
 
-- `agents.testing.ScriptedAdapter` plays back scripted model turns (`text(...)`, `call(...)`, `calls(...)`); register it with `scripted_registry(...)` and pass `adapters=` to `start`/`astart`.
-- Adapter contract tests replay recorded raw stream events (`FakeAnthropicClient`, fixtures under `packages/agents/tests/fixtures`); refresh them with `scripts/record_fixtures.py`.
+- `runhive.testing.ScriptedAdapter` plays back scripted model turns (`text(...)`, `call(...)`, `calls(...)`); register it with `scripted_registry(...)` and pass `adapters=` to `start`/`astart`.
+- Adapter contract tests replay recorded raw stream events (`FakeAnthropicClient`, fixtures under `packages/runhive/tests/fixtures`); refresh them with `scripts/record_fixtures.py`.
 - `pytest -m live` runs the live tests when `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` are set.

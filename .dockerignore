@@ -1,5 +1,5 @@
 # Keep the build context small: the image only needs the root pyproject.toml,
-# uv.lock and packages/{agents,agents-server}/{pyproject.toml,README.md,src}.
+# uv.lock and packages/{agents,runhive-server}/{pyproject.toml,README.md,src}.
 .git
 .github
 .venv

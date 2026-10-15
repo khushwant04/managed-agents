@@ -3,7 +3,7 @@
     TOOL_SIGNING_SECRET=<deployment webhook secret> uvicorn tools_server:app --port 9000
 
 The platform's tool gateway POSTs ``{"tool", "arguments", "call_id", ...}``
-signed with ``X-Agents-Signature``; requests with a bad signature are rejected.
+signed with ``X-Runhive-Signature``; requests with a bad signature are rejected.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import observability  # noqa: E402
 
-from agents.tools.webhook import verify  # noqa: E402
+from runhive.tools.webhook import verify  # noqa: E402
 
 app = FastAPI(title="incident-investigator tools")
 SECRET = os.environ.get("TOOL_SIGNING_SECRET", "")
@@ -32,7 +32,7 @@ HANDLERS = {
 @app.post("/tools/{name}")
 async def call_tool(name: str, request: Request) -> dict:
     body = await request.body()
-    if SECRET and not verify(SECRET, request.headers.get("X-Agents-Signature", ""), body):
+    if SECRET and not verify(SECRET, request.headers.get("X-Runhive-Signature", ""), body):
         raise HTTPException(401, "bad signature")
     if name not in HANDLERS:
         raise HTTPException(404, f"unknown tool {name}")

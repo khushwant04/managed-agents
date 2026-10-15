@@ -2,15 +2,15 @@
 #
 # Server image: gateway, worker, scheduler and migrations from one image.
 #
-#   docker build -t managed-agents-server .                          # default target
-#   docker build --target with-docker-cli -t managed-agents-server:docker .
+#   docker build -t runhive-server .                          # default target
+#   docker build --target with-docker-cli -t runhive-server:docker .
 #
-#   docker run --rm -p 8080:8080 -e DATABASE_URL=... managed-agents-server            # serve
-#   docker run --rm -e DATABASE_URL=... managed-agents-server worker
-#   docker run --rm -e DATABASE_URL=... managed-agents-server migrate
+#   docker run --rm -p 8080:8080 -e DATABASE_URL=... runhive-server            # serve
+#   docker run --rm -e DATABASE_URL=... runhive-server worker
+#   docker run --rm -e DATABASE_URL=... runhive-server migrate
 #
-# Installs the workspace packages `managed-agents[e2b]` and
-# `managed-agents-server[s3]` from uv.lock (no dev dependencies, no CLI).
+# Installs the workspace packages `runhive[e2b]` and
+# `runhive-server[s3]` from uv.lock (no dev dependencies, no CLI).
 # The `with-docker-cli` target adds the `docker` CLI for workers that use the
 # Docker sandbox provider (local development only; see docker-compose.yml).
 
@@ -36,8 +36,8 @@ ENV UV_COMPILE_BYTECODE=1 \
 WORKDIR /src
 
 # Selection shared by both sync steps. `--package` is repeated so the `e2b`
-# extra of managed-agents and the `s3` extra of managed-agents-server both apply.
-ARG UV_SYNC_ARGS="--frozen --no-dev --package managed-agents-server --package managed-agents --extra s3 --extra e2b"
+# extra of runhive and the `s3` extra of runhive-server both apply.
+ARG UV_SYNC_ARGS="--frozen --no-dev --package runhive-server --package runhive --extra s3 --extra e2b"
 
 # 1. Third-party dependencies only (cached until uv.lock changes).
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -47,10 +47,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 # 2. The workspace packages themselves, installed as regular (non-editable) wheels.
 COPY pyproject.toml uv.lock ./
-COPY packages/agents/pyproject.toml packages/agents/README.md packages/agents/
-COPY packages/agents/src packages/agents/src
-COPY packages/agents-server/pyproject.toml packages/agents-server/
-COPY packages/agents-server/src packages/agents-server/src
+COPY packages/runhive/pyproject.toml packages/runhive/README.md packages/runhive/
+COPY packages/runhive/src packages/runhive/src
+COPY packages/runhive-server/pyproject.toml packages/runhive-server/
+COPY packages/runhive-server/src packages/runhive-server/src
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync ${UV_SYNC_ARGS} --no-editable
 
@@ -59,8 +59,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # ---------------------------------------------------------------------------
 FROM python:${PYTHON_VERSION}-slim-bookworm AS runtime
 
-LABEL org.opencontainers.image.title="managed-agents-server" \
-      org.opencontainers.image.description="Gateway, registry, router, scheduler and runtime workers for managed agents." \
+LABEL org.opencontainers.image.title="runhive-server" \
+      org.opencontainers.image.description="Gateway, registry, router, scheduler and runtime workers for Runhive." \
       org.opencontainers.image.source="https://github.com/khushwant04/managed-agents"
 
 RUN groupadd --system --gid 10001 agents \
@@ -71,8 +71,8 @@ COPY --from=builder --chown=root:root /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    AGENTS_BLOB_URL=file:///home/agents/blobs \
-    AGENTS_HEALTHCHECK_URL=http://127.0.0.1:8080/healthz
+    RUNHIVE_BLOB_URL=file:///home/agents/blobs \
+    RUNHIVE_HEALTHCHECK_URL=http://127.0.0.1:8080/healthz
 
 USER agents
 WORKDIR /home/agents
@@ -82,13 +82,13 @@ EXPOSE 8080
 # Only meaningful for `serve` / `all`; compose disables it for worker and scheduler.
 # The slim image has no curl, so use the Python stdlib.
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \
-    CMD python -c "import os, urllib.request; urllib.request.urlopen(os.environ['AGENTS_HEALTHCHECK_URL'], timeout=4)" || exit 1
+    CMD python -c "import os, urllib.request; urllib.request.urlopen(os.environ['RUNHIVE_HEALTHCHECK_URL'], timeout=4)" || exit 1
 
-ENTRYPOINT ["agents-server"]
+ENTRYPOINT ["runhive-server"]
 CMD ["serve"]
 
 # ---------------------------------------------------------------------------
-# Optional: runtime + docker CLI, for workers using AGENTS_SANDBOX_PROVIDER=docker
+# Optional: runtime + docker CLI, for workers using RUNHIVE_SANDBOX_PROVIDER=docker
 # ---------------------------------------------------------------------------
 FROM runtime AS with-docker-cli
 COPY --from=dockercli /usr/local/bin/docker /usr/local/bin/docker
