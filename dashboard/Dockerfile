@@ -28,6 +28,10 @@ COPY . .
 RUN npm run build
 
 FROM node:${NODE_VERSION}-bookworm-slim AS runtime
+LABEL org.opencontainers.image.title="runhive-dashboard" \
+      org.opencontainers.image.description="The Runhive web console." \
+      org.opencontainers.image.source="https://github.com/khushwant04/managed-agents" \
+      org.opencontainers.image.licenses="Apache-2.0"
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \

@@ -2,6 +2,14 @@
   "name": "runhive-typescript",
   "private": true,
   "description": "TypeScript SDK workspace for Runhive (client + optional React hooks).",
+  "license": "Apache-2.0",
+  "author": "Khushwant Sanwalot",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/khushwant04/managed-agents.git"
+  },
+  "homepage": "https://github.com/khushwant04/managed-agents#readme",
+  "bugs": "https://github.com/khushwant04/managed-agents/issues",
   "workspaces": [
     "packages/client",
     "packages/react"

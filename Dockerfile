@@ -64,7 +64,8 @@ FROM python:${PYTHON_VERSION}-slim-bookworm AS runtime
 
 LABEL org.opencontainers.image.title="runhive-server" \
       org.opencontainers.image.description="Gateway, registry, router, scheduler and runtime workers for Runhive." \
-      org.opencontainers.image.source="https://github.com/khushwant04/managed-agents"
+      org.opencontainers.image.source="https://github.com/khushwant04/managed-agents" \
+      org.opencontainers.image.licenses="Apache-2.0"
 
 RUN groupadd --system --gid 10001 runhive \
  && useradd --system --uid 10001 --gid runhive --home-dir /home/runhive --create-home --shell /usr/sbin/nologin runhive

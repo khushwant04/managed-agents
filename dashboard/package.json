@@ -46,6 +46,15 @@
     "vitest": "5.0.4"
   },
   "description": "Dashboard for Runhive: agents, versions, aliases, deployments, playground, live session timelines and replay, usage and audit.",
+  "license": "Apache-2.0",
+  "author": "Khushwant Sanwalot",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/khushwant04/managed-agents.git",
+    "directory": "dashboard"
+  },
+  "homepage": "https://github.com/khushwant04/managed-agents#readme",
+  "bugs": "https://github.com/khushwant04/managed-agents/issues",
   "engines": {
     "node": ">=22.12.0"
   }
